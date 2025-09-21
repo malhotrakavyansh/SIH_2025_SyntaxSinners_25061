@@ -16,7 +16,7 @@ export default function Page() {
       {/* Landing overlay */}
       <Intro
         mp4="/hero.mp4"
-        title="Monastery360"
+        title="Sangha"
         subtitle="A digital window into Sikkim’s monasteries"
       />
 

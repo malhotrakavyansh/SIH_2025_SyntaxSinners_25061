@@ -32,8 +32,8 @@ export default function Nav() {
       <div className="bg-[#0c3b44] text-white">
         <nav className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           {/* Left: logo */}
-          <Link href="/" className="flex flex-col items-start gap-1">
-            <span className="inline-block h-5 w-5 rounded-sm bg-amber-400" />
+          <Link href="/" className="flex flex-row items-center gap-2">
+            <img src="/logo web.png" alt="Logo" className="h-12 w-12 object-contain" />
             <span className="font-poppins tracking-wide text-xl">Sangha</span>
             <span className="font-lora italic text-sm text-white/90"></span>
           </Link>
