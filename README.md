@@ -8,11 +8,11 @@ This README provides an overview of the project, including team details, relevan
 
 **Team Members:**  
 - MEMBER_1 – 2024UEC2628 – @radhika-c06 
-- MEMBER_2 – 2024UEC2633 – @USERNAME  
-- MEMBER_3 – 2024UEC2616 – @USERNAME  
+- MEMBER_2 – 2024UEC2633 – @vidushi2124  
+- MEMBER_3 – 2024UEC2616 – @palaksachdeva  
 - MEMBER_4 – 2024UIC4050 – @anshjayara  
-- MEMBER_5 – ROLL_NO – @USERNAME  
-- MEMBER_6 – ROLL_NO – @USERNAME  
+- MEMBER_5 – ROLL_NO – @malhotrakavyansh  
+- MEMBER_6 – ROLL_NO – @aryanbansal2124  
 
 ## 🔗 Project Links
 - **SIH Presentation:** [Final SIH Presentation](URL_TO_PPT)  
