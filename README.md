@@ -1,6 +1,4 @@
-# PS Chosen SIH Hackathon
-
-This README provides an overview of the project, including team details, relevant links, tasks completed, tech stack, key features, and steps to run the project locally.
+# PS 25061 SIH Hackathon
 
 ## 👥 Team Details
 - **Team Name:** SyntaxSinners  
@@ -11,12 +9,10 @@ This README provides an overview of the project, including team details, relevan
 - MEMBER_2 – 2024UEC2633 – @vidushi2124  
 - MEMBER_3 – 2024UEC2616 – @palaksachdeva  
 - MEMBER_4 – 2024UIC4050 – @anshjayara  
-- MEMBER_5 – ROLL_NO – @malhotrakavyansh  
-- MEMBER_6 – ROLL_NO – @aryanbansal2124  
+- MEMBER_5 – 2024UIC3558 – @malhotrakavyansh  
+- MEMBER_6 – 2024UIC3648 – @aryanbansal2124  
 
 ## 🔗 Project Links
 - **SIH Presentation:** [Final SIH Presentation](URL_TO_PPT)  
-- **Video Demonstration:** [Watch Video](UNLISTED_YOUTUBE_LINK)  
-- **Live Deployment:** [View Deployment](DEPLOYED_LINK)  
+- **Video Demonstration:** [Watch Video](https://drive.google.com/file/d/1v0Z1X5Di5uAIsCHSRzhH9bxAIYVt7O5P/view?usp=sharing) 
 - **Source Code:** [GitHub Repository](https://github.com/radhika-c06/SIH_2025_SyntaxSinners_25061)  
-- **Additional Resources:** [Other Relevant Links](ANY_OTHER_RELEVANT_LINKS)  
