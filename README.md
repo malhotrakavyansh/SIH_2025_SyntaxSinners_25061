@@ -13,6 +13,6 @@
 - MEMBER_6 – 2024UIC3648 – @aryanbansal2124  
 
 ## 🔗 Project Links
-- **SIH Presentation:** [Final SIH Presentation](URL_TO_PPT)  
+- **SIH Presentation:** [Final SIH Presentation](https://www.canva.com/design/DAGzZCwMxgg/NK2IH18_7jLhASktqqoNdA/edit?utm_content=DAGzZCwMxgg&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) 
 - **Video Demonstration:** [Watch Video](https://drive.google.com/file/d/1v0Z1X5Di5uAIsCHSRzhH9bxAIYVt7O5P/view?usp=sharing) 
 - **Source Code:** [GitHub Repository](https://github.com/radhika-c06/SIH_2025_SyntaxSinners_25061)  
