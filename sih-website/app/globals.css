@@ -74,3 +74,52 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   cursor: pointer;
 }
+
+/* Card pop + shine effect used by archive and monastery tiles */
+.pop-card {
+  position: relative;
+  transition: transform 280ms cubic-bezier(.2,.9,.2,1), box-shadow 280ms cubic-bezier(.2,.9,.2,1);
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+}
+.pop-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  z-index: 6;
+  box-shadow: 0 24px 48px rgba(11,10,10,0.38), 0 8px 18px rgba(11,10,10,0.18);
+}
+
+/* sweeping gold shine that travels across the card on hover */
+.shine-border::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 0;
+  width: 60%;
+  height: 100%;
+  pointer-events: none;
+  transform: skewX(-20deg) translateX(0);
+  background: linear-gradient(90deg, rgba(212,175,55,0.00) 0%, rgba(212,175,55,0.14) 35%, rgba(212,175,55,0.35) 50%, rgba(212,175,55,0.14) 65%, rgba(212,175,55,0.00) 100%);
+  mix-blend-mode: screen;
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.pop-card:hover.shine-border::after {
+  opacity: 1;
+  animation: shine-slide 900ms ease forwards;
+}
+
+@keyframes shine-slide {
+  from { transform: skewX(-20deg) translateX(-100%); }
+  to   { transform: skewX(-20deg) translateX(220%); }
+}
+
+/* subtle inner gold rim on hover */
+.pop-card:hover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 28px rgba(212,175,55,0.04), 0 0 30px rgba(212,175,55,0.06);
+}

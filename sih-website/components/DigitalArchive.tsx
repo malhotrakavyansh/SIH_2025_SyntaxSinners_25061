@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
+import Nav from "./Nav";
 import { motion, AnimatePresence } from "framer-motion";
 
 // NOTE: project was missing lucide-react and a custom UI library. Provide
@@ -67,7 +68,7 @@ const DialogContent = ({ children, className = "" }: any) => <div className={cla
 // ----------------------------------------------
 
 const MONASTERIES = [
-  "Rumtek", "Tashiding", "Dubdi", "Pemayangtse", "Phodong", "Ralang", "Enchey"
+  "Rumtek", "Tashiding", "Dubdi", "Pemayangtse"
 ];
 
 const TYPES = [
@@ -123,6 +124,26 @@ const SAMPLE_ITEMS = [
   },
 ];
 
+const MONASTERIES_INFO = [
+  { key: 'rumtek', label: 'Rumtek', img: '/monasteries/rumtek.jpg' },
+  { key: 'tashiding', label: 'Tashiding', img: '/monasteries/tashiding.png' },
+  { key: 'dubdi', label: 'Dubdi', img: '/monasteries/dubdi.png' },
+  { key: 'pemayangtse', label: 'Pemayangtse', img: '/monasteries/pemayangtse.jpg' },
+];
+
+function MonasteryCard({ m, onClick }: { m: any; onClick?: (label: string) => void }) {
+  return (
+    <div className="rounded-xl overflow-hidden shadow-md cursor-pointer w-full pop-card shine-border" onClick={() => onClick && onClick(m.label)}>
+      <div className="w-full overflow-hidden" style={{ aspectRatio: '3/2', background: '#EDEDED' }}>
+        <img src={m.img} alt={m.label} className="w-full h-full object-cover" />
+      </div>
+      <div style={{ background: '#D4AF37' }} className="px-3 py-3 text-center">
+        <span style={{ color: '#5B2C2C', fontWeight: 700, letterSpacing: '1px' }}>{m.label.toUpperCase()}</span>
+      </div>
+    </div>
+  );
+}
+
 function Chip({ children, onRemove }: { children: React.ReactNode; onRemove?: () => void }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm shadow-sm border" style={{
@@ -143,7 +164,7 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove?: ()
 function ArchiveCard({ item, onOpen }: { item: any; onOpen: (it: any) => void }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="overflow-hidden border-0 shadow-lg" style={{ borderRadius: "1.25rem" }}>
+      <Card className="overflow-hidden border-0 shadow-lg pop-card shine-border" style={{ borderRadius: "1.25rem" }}>
         <div className="aspect-[4/3] w-full overflow-hidden" style={{ background: "#2F3A3D" }}>
           <img src={item.img} alt={item.title} className="h-full w-full object-cover hover:scale-[1.02] transition-transform duration-300" />
         </div>
@@ -197,81 +218,128 @@ export default function DigitalArchivePage() {
   const removeMonastery = (m: string) => setSelectedMonasteries((prev) => prev.filter((x) => x !== m));
 
   return (
-    <div className="min-h-screen" style={{ background: "#F8F4EA" }}>
+    <main className="min-h-screen relative" style={{
+      backgroundImage: "url('/bg1.png')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+    }}>
+      <Nav />
+      {/* subtle overlay on background to improve contrast */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        background: `linear-gradient(120deg, rgba(91,44,44,0.06) 0%, rgba(91,44,44,0.06) 100%)`,
+        zIndex: 1,
+      }} />
+      <div className="relative" style={{ zIndex: 2, paddingTop: '72px' }}>
       {/* Hero / Header */}
-      <section className="px-4 md:px-8 lg:px-12 pt-10 pb-6">
+      <section className="pt-6 pb-6">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-6">
-            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs tracking-wide" style={{ background: "#5B2C2C", color: "#F8F4EA" }}>
-              <Sparkles className="h-4 w-4" /> AI · OCR · Cloud Preservation
+          {/* Banner with background video + maroon gradient overlay (uses public/archive.mp4) */}
+          <div className="relative rounded-xl overflow-hidden mb-6" style={{ borderRadius: '1rem' }}>
+            <div className="w-full h-56 md:h-72 lg:h-96 relative">
+              <video
+                src={'/archive.mp4'}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+                style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }}
+              />
+
+              {/* gradient overlay to improve text contrast */}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(91,44,44,0.88) 0%, rgba(91,44,44,0.6) 35%, rgba(0,0,0,0.0) 100%)' }} />
+
+              {/* content overlay */}
+              <div className="absolute inset-0 flex items-center">
+                <div className="px-6 md:px-12 py-6 md:py-8">
+                  <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs tracking-wide" style={{ background: '#5B2C2C', color: '#F8F4EA' }}>
+                    <Sparkles className="h-4 w-4" /> AI · OCR · Cloud Preservation
+                  </div>
+                  <h1 className="mt-4 text-3xl md:text-6xl font-extrabold leading-tight font-poppins" style={{ color: '#F8F4EA' }}>
+                    Digital Archive Library
+                  </h1>
+                  <p className="mt-3 max-w-3xl text-sm md:text-lg" style={{ color: '#F8F4EA', opacity: 0.95 }}>
+                    Ancient murals, thangkas, and manuscripts carefully digitized using AI-powered OCR and cloud systems, now live on as a searchable cultural library for generations to come.
+                  </p>
+                </div>
+              </div>
             </div>
-            <h1 className="mt-4 text-3xl md:text-5xl font-bold leading-tight" style={{ color: "#2F3A3D" }}>
-              Digital Archive Library
-            </h1>
-            <p className="mt-3 max-w-3xl text-base md:text-lg" style={{ color: "#2F3A3D" }}>
-              Ancient murals, thangkas, and manuscripts—carefully digitized using AI-powered OCR and cloud systems—now live on as a searchable cultural library for generations to come.
-            </p>
           </div>
 
-          {/* Search & Filters */}
+          {/* Monastery showcase: image tiles from public/monasteries */}
+          <div className="mt-2 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {MONASTERIES_INFO.map((m) => (
+                <MonasteryCard key={m.key} m={m} onClick={(label) => setSelectedMonasteries([label])} />
+              ))}
+            </div>
+          </div>
+        
+
+          {/* Search & Filters – two-column layout spanning full width */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div className="md:col-span-6">
-              <div className="flex items-center gap-3 rounded-2xl border bg-white px-3 py-2 shadow-sm" style={{ borderColor: "#E8E2D6" }}>
-                <Search className="h-5 w-5" style={{ color: "#5B2C2C" }} />
-                <Input value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="Search titles, OCR text, or tags..." className="border-0 focus-visible:ring-0" />
+            {/* Left: Monasteries */}
+            <div className="md:col-span-4">
+              <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+                <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>MONASTERIES</h3>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
+                      <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Select Location</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Select Monasteries</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {MONASTERIES.map((m) => (
+                      <DropdownMenuCheckboxItem
+                        key={m}
+                        checked={selectedMonasteries.includes(m)}
+                        onCheckedChange={(v: boolean) => {
+                          setSelectedMonasteries((prev) => v ? Array.from(new Set([...prev, m])) : prev.filter((x) => x !== m));
+                        }}
+                      >{m}</DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
-            <div className="md:col-span-6 flex flex-wrap items-center gap-3 justify-start md:justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl" style={{ borderColor: "#D4AF37", color: "#5B2C2C" }}>
-                    <Filter className="h-4 w-4 mr-2" /> Monasteries <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Select Monasteries</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {MONASTERIES.map((m) => (
-                    <DropdownMenuCheckboxItem
-                      key={m}
-                      checked={selectedMonasteries.includes(m)}
-                      onCheckedChange={(v: boolean) => {
-                        setSelectedMonasteries((prev) => v ? Array.from(new Set([...prev, m])) : prev.filter((x) => x !== m));
-                      }}
-                    >{m}</DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="rounded-2xl" style={{ borderColor: "#D4AF37", color: "#5B2C2C" }}>
-                    <Filter className="h-4 w-4 mr-2" /> Type <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Artifact Type</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {TYPES.map((t) => (
-                    <DropdownMenuCheckboxItem
-                      key={t.key}
-                      checked={selectedTypes.includes(t.key)}
-                      onCheckedChange={() => toggleType(t.key)}
-                    >{t.label}</DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button
-                variant={aiOnly ? "default" : "outline"}
-                onClick={() => setAiOnly((v) => !v)}
-                className="rounded-2xl"
-                style={{ background: aiOnly ? "#2A6F6C" : "white", color: aiOnly ? "white" : "#2F3A3D", borderColor: aiOnly ? "#2A6F6C" : "#D4AF37" }}
-              >
-                <ShieldCheck className="h-4 w-4 mr-2" /> AI/OCR Only
-              </Button>
+            {/* Center: Artifact Type */}
+            <div className="md:col-span-4">
+              <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+                <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>ARTIFACT TYPE</h3>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
+                      <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Filter Type</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuLabel>Artifact Type</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {TYPES.map((t) => (
+                      <DropdownMenuCheckboxItem
+                        key={t.key}
+                        checked={selectedTypes.includes(t.key)}
+                        onCheckedChange={() => toggleType(t.key)}
+                      >{t.label}</DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
+
           </div>
 
           {/* Active filter chips */}
@@ -362,6 +430,7 @@ export default function DigitalArchivePage() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </main>
   );
 }
