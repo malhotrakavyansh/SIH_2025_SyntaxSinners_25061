@@ -8,55 +8,71 @@ import { motion, AnimatePresence } from "framer-motion";
 // dependencies. These are minimal and can be replaced with your preferred
 // design system later.
 
-const Icon = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <span className={className} aria-hidden>
+type IconProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
+const Icon = ({ children, className = "", style }: IconProps) => (
+  <span className={className} style={style} aria-hidden>
     {children}
   </span>
 );
-const Search = (props:any) => <Icon {...props}>🔍</Icon>;
-const Filter = (props:any) => <Icon {...props}>⚙️</Icon>;
-const ChevronDown = (props:any) => <Icon {...props}>▾</Icon>;
-const X = (props:any) => <Icon {...props}>✕</Icon>;
-const ImageIcon = (props:any) => <Icon {...props}>🖼️</Icon>;
-const FileText = (props:any) => <Icon {...props}>📄</Icon>;
-const BookOpen = (props:any) => <Icon {...props}>📚</Icon>;
-const Download = (props:any) => <Icon {...props}>⬇️</Icon>;
-const Eye = (props:any) => <Icon {...props}>👁️</Icon>;
-const Sparkles = (props:any) => <Icon {...props}>✨</Icon>;
-const MapPin = (props:any) => <Icon {...props}>📍</Icon>;
-const Calendar = (props:any) => <Icon {...props}>📅</Icon>;
-const ShieldCheck = (props:any) => <Icon {...props}>🛡️</Icon>;
+type GlyphProps = { className?: string; style?: React.CSSProperties };
+const Search = (props: GlyphProps) => <Icon {...props}>🔍</Icon>;
+const Filter = (props: GlyphProps) => <Icon {...props}>⚙️</Icon>;
+const ChevronDown = (props: GlyphProps) => <Icon {...props}>▾</Icon>;
+const X = (props: GlyphProps) => <Icon {...props}>✕</Icon>;
+const ImageIcon = (props: GlyphProps) => <Icon {...props}>🖼️</Icon>;
+const FileText = (props: GlyphProps) => <Icon {...props}>📄</Icon>;
+const BookOpen = (props: GlyphProps) => <Icon {...props}>📚</Icon>;
+const Download = (props: GlyphProps) => <Icon {...props}>⬇️</Icon>;
+const Eye = (props: GlyphProps) => <Icon {...props}>👁️</Icon>;
+const Sparkles = (props: GlyphProps) => <Icon {...props}>✨</Icon>;
+const MapPin = (props: GlyphProps) => <Icon {...props}>📍</Icon>;
+const Calendar = (props: GlyphProps) => <Icon {...props}>📅</Icon>;
+const ShieldCheck = (props: GlyphProps) => <Icon {...props}>🛡️</Icon>;
 
 // Minimal UI primitives
-const Card = ({ children, className = "", style = {} }: any) => (
+type CardProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
+const Card = ({ children, className = "", style = {} }: CardProps) => (
   <div className={className} style={style}>{children}</div>
 );
-const CardContent = ({ children, className = "" }: any) => (
+const CardContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={className}>{children}</div>
 );
-const Button = ({ children, onClick, className = "", variant, style = {} }: any) => (
-  <button onClick={onClick} className={className} style={style}>{children}</button>
+type ButtonProps = {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  variant?: string;
+  style?: React.CSSProperties;
+  disabled?: boolean;
+};
+const Button = ({ children, onClick, className = "", style = {}, disabled }: ButtonProps) => (
+  <button onClick={onClick} className={className} style={style} disabled={disabled}>{children}</button>
 );
-const Input = (props: any) => <input {...props} />;
-const Badge = ({ children, className = "", style = {} }: any) => (
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />;
+type BadgeProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
+const Badge = ({ children, className = "", style = {} }: BadgeProps) => (
   <span className={className} style={{ ...style, color: style.color || "#2F3A3D" }}>{children}</span>
 );
 
 // Very small dropdown & dialog fallbacks that simply render their children.
-const DropdownMenu = ({ children }: any) => <div>{children}</div>;
-const DropdownMenuTrigger = ({ children }: any) => children;
-const DropdownMenuContent = ({ children, className = "" }: any) => <div className={className}>{children}</div>;
-const DropdownMenuCheckboxItem = ({ children, checked, onCheckedChange }: any) => (
+const DropdownMenu = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+const DropdownMenuTrigger = ({ children }: { children: React.ReactNode; asChild?: boolean }) => children;
+const DropdownMenuContent = ({ children, className = "" }: { children: React.ReactNode; className?: string; align?: string }) => <div className={className}>{children}</div>;
+const DropdownMenuCheckboxItem = ({ children, checked, onCheckedChange }: {
+  children: React.ReactNode;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) => (
   <label className="flex items-center gap-2 px-2 py-1 cursor-pointer" style={{ color: '#2F3A3D' }}>
     <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} />
     <span style={{ color: '#2F3A3D' }}>{children}</span>
   </label>
 );
-const DropdownMenuLabel = ({ children }: any) => <div className="px-2 py-1 font-semibold" style={{ color: '#2F3A3D' }}>{children}</div>;
+const DropdownMenuLabel = ({ children }: { children: React.ReactNode }) => <div className="px-2 py-1 font-semibold" style={{ color: '#2F3A3D' }}>{children}</div>;
 const DropdownMenuSeparator = () => <hr className="my-2" style={{ borderColor: '#E8E2D6' }} />;
 
-const Dialog = ({ open, onOpenChange, children }: any) => open ? <div>{children}</div> : null;
-const DialogContent = ({ children, className = "" }: any) => <div className={className}>{children}</div>;
+const Dialog = ({ open, children }: { open: boolean; onOpenChange: (open: boolean) => void; children: React.ReactNode }) => open ? <div>{children}</div> : null;
+const DialogContent = ({ children, className = "", style = {} }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) => <div className={className} style={style}>{children}</div>;
 
 // ----------------------------------------------
 // THEME (approx. matched to video):
@@ -77,7 +93,19 @@ const TYPES = [
   { key: "manuscript", label: "Manuscripts", icon: FileText },
 ];
 
-const SAMPLE_ITEMS = [
+type ArchiveItem = {
+  id: string;
+  title: string;
+  monastery: string;
+  type: string;
+  year: string;
+  img: string;
+  tags: string[];
+  ocrText: string;
+  location: string;
+};
+
+const SAMPLE_ITEMS: ArchiveItem[] = [
   {
     id: "a1",
     title: "Lotus-Born Guru Mural",
@@ -124,14 +152,16 @@ const SAMPLE_ITEMS = [
   },
 ];
 
-const MONASTERIES_INFO = [
+type MonasteryInfo = { key: string; label: string; img: string };
+
+const MONASTERIES_INFO: MonasteryInfo[] = [
   { key: 'rumtek', label: 'Rumtek', img: '/monasteries/rumtek.jpg' },
   { key: 'tashiding', label: 'Tashiding', img: '/monasteries/tashiding.png' },
   { key: 'dubdi', label: 'Dubdi', img: '/monasteries/dubdi.png' },
   { key: 'pemayangtse', label: 'Pemayangtse', img: '/monasteries/pemayangtse.jpg' },
 ];
 
-function MonasteryCard({ m, onClick }: { m: any; onClick?: (label: string) => void }) {
+function MonasteryCard({ m, onClick }: { m: MonasteryInfo; onClick?: (label: string) => void }) {
   return (
     <div className="rounded-xl overflow-hidden shadow-md cursor-pointer w-full pop-card shine-border" onClick={() => onClick && onClick(m.label)}>
       <div className="w-full overflow-hidden" style={{ aspectRatio: '3/2', background: '#EDEDED' }}>
@@ -161,7 +191,7 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove?: ()
   );
 }
 
-function ArchiveCard({ item, onOpen }: { item: any; onOpen: (it: any) => void }) {
+function ArchiveCard({ item, onOpen }: { item: ArchiveItem; onOpen: (it: ArchiveItem) => void }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="overflow-hidden border-0 shadow-lg pop-card shine-border" style={{ borderRadius: "1.25rem" }}>
@@ -179,14 +209,14 @@ function ArchiveCard({ item, onOpen }: { item: any; onOpen: (it: any) => void })
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {item.tags.map((t: string) => (
-              <Badge key={t} variant="secondary" className="text-[11px]" style={{ background: "#F8F4EA", color: "#2F3A3D", border: "1px solid #E8E2D6" }}>{t}</Badge>
+              <Badge key={t} className="text-[11px]" style={{ background: "#F8F4EA", color: "#2F3A3D", border: "1px solid #E8E2D6" }}>{t}</Badge>
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3">
             <Button onClick={() => onOpen(item)} className="shadow-sm" style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
               <Eye className="h-4 w-4 mr-2" /> View
             </Button>
-            <Button variant="outline" className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
+            <Button className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
               <Download className="h-4 w-4 mr-2" /> Download
             </Button>
           </div>
@@ -197,9 +227,9 @@ function ArchiveCard({ item, onOpen }: { item: any; onOpen: (it: any) => void })
 }
 
 export default function DigitalArchivePage() {
-  const [query, setQuery] = useState("");
+  const [query] = useState("");
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<any | null>(null);
+  const [active, setActive] = useState<ArchiveItem | null>(null);
   const [selectedMonasteries, setSelectedMonasteries] = useState<string[]>(["Rumtek", "Tashiding", "Dubdi", "Pemayangtse"]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [aiOnly, setAiOnly] = useState(false);
@@ -280,7 +310,7 @@ export default function DigitalArchivePage() {
               ))}
             </div>
           </div>
-        
+
 
           {/* Search & Filters – two-column layout spanning full width */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
@@ -288,10 +318,10 @@ export default function DigitalArchivePage() {
             <div className="md:col-span-4">
               <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
                 <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>MONASTERIES</h3>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
+                    <Button className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
                       <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Select Location</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
@@ -317,10 +347,10 @@ export default function DigitalArchivePage() {
             <div className="md:col-span-4">
               <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
                 <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>ARTIFACT TYPE</h3>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
+                    <Button className="w-full rounded-xl text-left justify-between" style={{ borderColor: "#D4AF37", color: "#5B2C2C", background: "white" }}>
                       <span className="flex items-center gap-2"><Filter className="h-4 w-4" /> Filter Type</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
@@ -393,7 +423,7 @@ export default function DigitalArchivePage() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {active.tags.map((t: string) => (
-                    <Badge key={t} variant="secondary" className="text-[11px]" style={{ background: "#F8F4EA", color: "#2F3A3D", border: "1px solid #E8E2D6" }}>{t}</Badge>
+                    <Badge key={t} className="text-[11px]" style={{ background: "#F8F4EA", color: "#2F3A3D", border: "1px solid #E8E2D6" }}>{t}</Badge>
                   ))}
                 </div>
 
@@ -408,7 +438,7 @@ export default function DigitalArchivePage() {
                   <Button className="shadow-sm" style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
                     <Download className="h-4 w-4 mr-2" /> Download Artifact
                   </Button>
-                  <Button variant="outline" className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
+                  <Button className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
                     <BookOpen className="h-4 w-4 mr-2" /> View Full Metadata
                   </Button>
                 </div>

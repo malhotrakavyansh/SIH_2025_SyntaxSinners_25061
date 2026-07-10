@@ -65,7 +65,7 @@ export default function BodhiChatbot() {
           {/* Chatbot Header */}
           <div className="flex flex-col items-center justify-center pt-10 pb-4">
             <img src="/bodhi.png" alt="Bodhi chatbot icon" className="w-28 h-40 object-contain" />
-            <h2 className="text-2xl font-bold text-[#004d4d] mt-2">Hello, I'm Bodhi</h2>
+            <h2 className="text-2xl font-bold text-[#004d4d] mt-2">Hello, I&apos;m Bodhi</h2>
           </div>
           {/* Chat area */}
           <div className="flex-1 w-full max-w-2xl mx-auto px-6 overflow-y-auto">

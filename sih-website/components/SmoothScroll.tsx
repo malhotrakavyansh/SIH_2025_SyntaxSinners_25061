@@ -26,7 +26,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     return () => {
       document.removeEventListener("click", onClick);
-      // @ts-ignore
       if (typeof lenis.destroy === "function") lenis.destroy();
     };
   }, []);

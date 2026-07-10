@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@studio-freight/lenis": "^1.0.42",
     "framer-motion": "^12.23.16",
     "gsap": "^3.13.0",
     "next": "15.5.3",
