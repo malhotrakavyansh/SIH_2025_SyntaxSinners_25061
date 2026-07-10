@@ -1,7 +1,9 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Nav from "./Nav";
 import { motion, AnimatePresence } from "framer-motion";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // NOTE: project was missing lucide-react and a custom UI library. Provide
 // small local fallbacks so this component compiles and works without those
@@ -103,52 +105,32 @@ type ArchiveItem = {
   location: string;
 };
 
-const SAMPLE_ITEMS: ArchiveItem[] = [
-  {
-    id: "a1",
-    title: "Lotus-Born Guru Mural",
-    monastery: "Tashiding",
-    type: "mural",
-    year: "17th c.",
-  img: "/lotus.jpg",
-    tags: ["AI-OCR processed", "High-res"],
-    ocrText: "༄༅། །པདྨ་འབྱུང་གནས་རྣམ་བཞི...",
-    location: "West Sikkim",
-  },
-  {
-    id: "a2",
-    title: "Silk Thangka – Avalokiteśvara",
-    monastery: "Rumtek",
-    type: "thangka",
-    year: "18th c.",
-  img: "/thangka.jpg",
-    tags: ["Color-corrected", "AI-enhanced"],
-    ocrText: "ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ...",
-    location: "Gangtok",
-  },
-  {
-    id: "a3",
-    title: "Palm-leaf Manuscript Folio",
-    monastery: "Pemayangtse",
-    type: "manuscript",
-    year: "16th c.",
-  img: "/manuscript.jpeg",
-    tags: ["OCR-ready", "Metadata complete"],
-    ocrText: "śāntideva bodhicaryāvatāra...",
-    location: "Pelling",
-  },
-  {
-    id: "a4",
-    title: "Wall Mural – Wheel of Life",
-    monastery: "Dubdi",
-    type: "mural",
-    year: "17th c.",
-  img: "/wheel.jpg",
-    tags: ["AI-OCR processed", "Gigapixel"],
-    ocrText: "འཁོར་བའི་འཁོར་ལོ...",
-    location: "Yuksom",
-  },
-];
+// Shape returned by the backend (GET /archive, POST /archive/upload)
+type ApiArchiveItem = {
+  id: string;
+  title: string;
+  monastery: string;
+  type: string;
+  year: string;
+  location: string;
+  image_filename: string;
+  ocrText: string;
+  tags: string[];
+};
+
+function fromApiItem(d: ApiArchiveItem): ArchiveItem {
+  return {
+    id: d.id,
+    title: d.title,
+    monastery: d.monastery,
+    type: d.type,
+    year: d.year,
+    location: d.location,
+    img: `${API_URL}/archive_uploads/${d.image_filename}`,
+    ocrText: d.ocrText,
+    tags: d.tags,
+  };
+}
 
 type MonasteryInfo = { key: string; label: string; img: string };
 
@@ -224,6 +206,97 @@ function ArchiveCard({ item, onOpen }: { item: ArchiveItem; onOpen: (it: Archive
   );
 }
 
+function UploadForm({ onUploaded }: { onUploaded: (item: ArchiveItem) => void }) {
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [monastery, setMonastery] = useState(MONASTERIES[0]);
+  const [type, setType] = useState(TYPES[0].key);
+  const [year, setYear] = useState("");
+  const [location, setLocation] = useState("");
+  const [tags, setTags] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+
+  const reset = () => {
+    setTitle("");
+    setYear("");
+    setLocation("");
+    setTags("");
+    setFile(null);
+    setMonastery(MONASTERIES[0]);
+    setType(TYPES[0].key);
+    setError(null);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      setError("Please choose an image.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("monastery", monastery);
+      formData.append("type", type);
+      formData.append("year", year);
+      formData.append("location", location);
+      formData.append("tags", tags);
+      formData.append("file", file);
+      const res = await fetch(`${API_URL}/archive/upload`, { method: "POST", body: formData });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const item: ApiArchiveItem = await res.json();
+      onUploaded(fromApiItem(item));
+      reset();
+      setOpen(false);
+    } catch {
+      setError("Upload failed. Is the backend running?");
+    }
+    setSubmitting(false);
+  };
+
+  const inputClass = "border rounded-lg px-3 py-2 text-sm";
+  const inputStyle = { borderColor: "#E8E2D6", color: "#2F3A3D" };
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)} className="shadow-sm" style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
+        + Add Artifact
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg p-6" style={{ background: "white", borderRadius: "1.25rem" }}>
+          <h3 className="text-xl font-semibold mb-4" style={{ color: "#2F3A3D" }}>Add Artifact</h3>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <input required placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} style={inputStyle} />
+            <select value={monastery} onChange={(e) => setMonastery(e.target.value)} className={inputClass} style={inputStyle}>
+              {MONASTERIES.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass} style={inputStyle}>
+              {TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+            <input required placeholder="Year (e.g. 17th c.)" value={year} onChange={(e) => setYear(e.target.value)} className={inputClass} style={inputStyle} />
+            <input required placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} style={inputStyle} />
+            <input placeholder="Tags (comma-separated)" value={tags} onChange={(e) => setTags(e.target.value)} className={inputClass} style={inputStyle} />
+            <input required type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            {error && <div className="text-sm" style={{ color: "#b91c1c" }}>{error}</div>}
+            <div className="flex gap-3 mt-2">
+              <Button className="shadow-sm" disabled={submitting} style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
+                {submitting ? "Uploading & running OCR…" : "Upload"}
+              </Button>
+              <Button onClick={() => setOpen(false)} className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function DigitalArchivePage() {
   const [query] = useState("");
   const [open, setOpen] = useState(false);
@@ -231,16 +304,42 @@ export default function DigitalArchivePage() {
   const [selectedMonasteries, setSelectedMonasteries] = useState<string[]>(["Rumtek", "Tashiding", "Dubdi", "Pemayangtse"]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [aiOnly, setAiOnly] = useState(false);
+  const [items, setItems] = useState<ArchiveItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_URL}/archive`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: ApiArchiveItem[]) => {
+        if (cancelled) return;
+        setItems(data.map(fromApiItem));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError(true);
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
-    return SAMPLE_ITEMS.filter((it) => {
+    return items.filter((it) => {
       const matchesQ = !query || (it.title.toLowerCase().includes(query.toLowerCase()) || it.ocrText.toLowerCase().includes(query.toLowerCase()));
       const matchesM = selectedMonasteries.includes(it.monastery);
       const matchesT = selectedTypes.length === 0 || selectedTypes.includes(it.type);
       const matchesAI = !aiOnly || it.tags.some((t: string) => /AI|OCR/i.test(t));
       return matchesQ && matchesM && matchesT && matchesAI;
     });
-  }, [query, selectedMonasteries, selectedTypes, aiOnly]);
+  }, [items, query, selectedMonasteries, selectedTypes, aiOnly]);
 
   const toggleType = (t: string) => setSelectedTypes((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
   const removeMonastery = (m: string) => setSelectedMonasteries((prev) => prev.filter((x) => x !== m));
@@ -371,7 +470,7 @@ export default function DigitalArchivePage() {
           </div>
 
           {/* Active filter chips */}
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {selectedMonasteries.map((m) => (
               <Chip key={m} onRemove={() => removeMonastery(m)}>{m}</Chip>
             ))}
@@ -379,6 +478,9 @@ export default function DigitalArchivePage() {
               <Chip key={t} onRemove={() => toggleType(t)}>{t}</Chip>
             ))}
             {aiOnly && <Chip onRemove={() => setAiOnly(false)}>AI/OCR</Chip>}
+            <div className="ml-auto">
+              <UploadForm onUploaded={(item) => setItems((prev) => [item, ...prev])} />
+            </div>
           </div>
         </div>
       </section>
@@ -386,7 +488,15 @@ export default function DigitalArchivePage() {
       {/* Grid */}
       <section className="px-4 md:px-8 lg:px-12 pb-16">
         <div className="mx-auto max-w-7xl">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="rounded-2xl border bg-white p-8 text-center" style={{ borderColor: "#E8E2D6", color: "#2F3A3D" }}>
+              Loading artifacts…
+            </div>
+          ) : loadError ? (
+            <div className="rounded-2xl border bg-white p-8 text-center" style={{ borderColor: "#E8E2D6", color: "#2F3A3D" }}>
+              Couldn&apos;t reach the archive service. Is the backend running?
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="rounded-2xl border bg-white p-8 text-center" style={{ borderColor: "#E8E2D6", color: "#2F3A3D" }}>
               No results. Try removing some filters.
             </div>
