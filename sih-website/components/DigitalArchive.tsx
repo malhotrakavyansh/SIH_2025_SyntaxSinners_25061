@@ -15,7 +15,6 @@ const Icon = ({ children, className = "", style }: IconProps) => (
   </span>
 );
 type GlyphProps = { className?: string; style?: React.CSSProperties };
-const Search = (props: GlyphProps) => <Icon {...props}>🔍</Icon>;
 const Filter = (props: GlyphProps) => <Icon {...props}>⚙️</Icon>;
 const ChevronDown = (props: GlyphProps) => <Icon {...props}>▾</Icon>;
 const X = (props: GlyphProps) => <Icon {...props}>✕</Icon>;
@@ -48,7 +47,6 @@ type ButtonProps = {
 const Button = ({ children, onClick, className = "", style = {}, disabled }: ButtonProps) => (
   <button onClick={onClick} className={className} style={style} disabled={disabled}>{children}</button>
 );
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />;
 type BadgeProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
 const Badge = ({ children, className = "", style = {} }: BadgeProps) => (
   <span className={className} style={{ ...style, color: style.color || "#2F3A3D" }}>{children}</span>

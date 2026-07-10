@@ -2,9 +2,7 @@
 import Intro from "../components/Intro";
 import Nav from "../components/Nav";
 import Hero from "../components/Hero";
-import Reveal from "../components/Reveal";
 import ExploreCarouselMount from "../components/ExploreCarouselMount";
-import { useEffect, useRef, useState } from "react";
 import MonasterySlideshow from "../components/MonasterySlideshow";
 import MonasteryMap from "../components/MonasteryMap";
 

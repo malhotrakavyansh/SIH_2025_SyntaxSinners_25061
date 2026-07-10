@@ -1,13 +1,10 @@
 "use client";
-import { useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import { Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "swiper/css/effect-coverflow";
-
-type Slide = { src: string; title: string };
 
 const SLIDES: string[] = [
   "/carousel/1.jpg",
@@ -20,8 +17,6 @@ const SLIDES: string[] = [
 
 
 export default function HeroCarousel() {
-  const [active, setActive] = useState(0);
-
   return (
     <div className="relative select-none">
       <Swiper
@@ -30,7 +25,6 @@ export default function HeroCarousel() {
         loop
         autoplay={{ delay: 0, disableOnInteraction: false }}
         speed={12000}
-        onSlideChange={(s) => setActive(s.realIndex)}
         breakpoints={{
           0:    { slidesPerView: 1.15, spaceBetween: 12 },
           640:  { slidesPerView: 1.6,  spaceBetween: 14 },

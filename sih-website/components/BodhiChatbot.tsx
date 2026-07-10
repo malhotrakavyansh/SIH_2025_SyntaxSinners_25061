@@ -39,7 +39,7 @@ export default function BodhiChatbot() {
       });
       const data = await res.json();
       setMessages((msgs) => [...msgs, { sender: "bot", text: data.reply, sources: data.sources }]);
-    } catch (err) {
+    } catch {
       setMessages((msgs) => [...msgs, { sender: "bot", text: "Sorry, I couldn't connect to Bodhi right now." }]);
     }
     setLoading(false);
