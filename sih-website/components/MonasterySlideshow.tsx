@@ -140,7 +140,11 @@ export default function MonasterySlideshow() {
               <div className="px-12 py-8 flex-1 flex flex-col justify-center h-full bg-[#e5e5e5]" style={{ minHeight: '100%' }}>
                 <div className="flex flex-col justify-center h-full">
                   <p className="text-xl font-merriweather text-black mb-8 leading-relaxed">{m.description}</p>
-                  <span className="inline-block bg-amber-400 text-black font-cinzel px-8 py-3 rounded-full text-lg self-start">Slide In</span>
+                  <button
+                    type="button"
+                    onClick={next}
+                    className="inline-block bg-amber-400 text-black font-cinzel px-8 py-3 rounded-full text-lg self-start hover:bg-amber-300 transition-colors cursor-pointer"
+                  >Slide In</button>
                 </div>
               </div>
               {/* Details Box */}
