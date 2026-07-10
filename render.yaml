@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: sangha-backend
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python ingest.py"
+    startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: GEMINI_API_KEY
+        sync: false
