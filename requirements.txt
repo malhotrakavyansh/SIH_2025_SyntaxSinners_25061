@@ -1,0 +1,7 @@
+google-genai
+python-dotenv
+chromadb
+fastapi
+uvicorn
+pydantic
+sentence-transformers
