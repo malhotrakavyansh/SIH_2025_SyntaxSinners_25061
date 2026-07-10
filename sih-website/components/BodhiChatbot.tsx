@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export default function BodhiChatbot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<
@@ -30,7 +32,7 @@ export default function BodhiChatbot() {
     setInput("");
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input, session_id: sessionId })

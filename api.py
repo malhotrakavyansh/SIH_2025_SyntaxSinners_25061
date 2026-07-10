@@ -15,9 +15,15 @@ if not api_key:
 # Initialize FastAPI app and the Bodhi engine
 app = FastAPI(title="Sangha Platform - Bodhi AI API")
 
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
