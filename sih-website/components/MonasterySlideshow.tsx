@@ -44,20 +44,42 @@ const MONASTERIES = [
 export default function MonasterySlideshow() {
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
-  const next = () => setIndex((i) => (i + 1) % MONASTERIES.length);
-  const prev = () => setIndex((i) => (i - 1 + MONASTERIES.length) % MONASTERIES.length);
   const m = MONASTERIES[index];
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const interval = setInterval(() => {
+  const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dragStartX = useRef<number | null>(null);
+
+  const startAutoplay = () => {
+    if (autoplayRef.current) clearInterval(autoplayRef.current);
+    autoplayRef.current = setInterval(() => {
       setFade(false);
       setTimeout(() => {
         setIndex((i) => (i + 1) % MONASTERIES.length);
         setFade(true);
       }, 400);
     }, 5000);
-    return () => clearInterval(interval);
+  };
+
+  // manual navigation (arrows, thumbnails, drag) restarts the autoplay timer
+  // so it doesn't yank the slide away right after the user interacts
+  const goTo = (newIndex: number) => {
+    setFade(false);
+    setTimeout(() => {
+      setIndex(newIndex);
+      setFade(true);
+    }, 400);
+    startAutoplay();
+  };
+  const next = () => goTo((index + 1) % MONASTERIES.length);
+  const prev = () => goTo((index - 1 + MONASTERIES.length) % MONASTERIES.length);
+
+  useEffect(() => {
+    startAutoplay();
+    return () => {
+      if (autoplayRef.current) clearInterval(autoplayRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const observer = new window.IntersectionObserver(
@@ -67,6 +89,21 @@ export default function MonasterySlideshow() {
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
+
+  const DRAG_THRESHOLD = 50;
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+  };
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    const deltaX = e.clientX - dragStartX.current;
+    dragStartX.current = null;
+    if (deltaX > DRAG_THRESHOLD) prev();
+    else if (deltaX < -DRAG_THRESHOLD) next();
+  };
+  const handlePointerLeave = () => {
+    dragStartX.current = null;
+  };
   return (
     <div ref={ref} className={`w-full flex flex-col items-center mt-50 fade-in-section${visible ? ' is-visible' : ''}`}> 
       {/* Title and Subtitle */}
@@ -83,8 +120,11 @@ export default function MonasterySlideshow() {
         >&#8249;</button>
         {/* Main Card Slide */}
         <div
-          className={`flex flex-row w-full rounded-2xl overflow-hidden shadow-xl relative transition-all duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}
-          style={{ minHeight: '400px', height: '400px', background: 'linear-gradient(to right, #e5e5e5 65%, #bdbdbd 35%)' }}
+          className={`flex flex-row w-full rounded-2xl overflow-hidden shadow-xl relative transition-all duration-500 select-none ${fade ? 'opacity-100' : 'opacity-0'}`}
+          style={{ minHeight: '400px', height: '400px', background: 'linear-gradient(to right, #e5e5e5 65%, #bdbdbd 35%)', cursor: 'grab', touchAction: 'pan-y' }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
         >
           {/* Image */}
           <img src={m.image} alt={m.name} className="w-[420px] h-full object-cover rounded-l-2xl" />
