@@ -18,7 +18,8 @@
     "react-dom": "19.1.0",
     "react-i18next": "^16.4.0",
     "react-markdown": "^10.1.0",
-    "swiper": "^14.0.5"
+    "swiper": "^14.0.5",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
