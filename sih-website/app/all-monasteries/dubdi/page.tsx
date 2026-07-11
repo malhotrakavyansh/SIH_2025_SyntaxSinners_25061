@@ -103,8 +103,9 @@ export default function DubdiMonastery() {
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
-        audioRef.current.play().catch(err => console.error('Play error:', err));
-        setIsPlaying(true);
+        audioRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch((err) => console.error('Play error:', err));
       }
     }
   };

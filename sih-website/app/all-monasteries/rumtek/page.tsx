@@ -334,8 +334,9 @@ export default function RumtekMonastery() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => console.error('Play error:', err));
     }
   };
 
