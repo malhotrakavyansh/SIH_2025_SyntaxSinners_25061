@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 const MONASTERIES = [
   {
@@ -10,6 +11,7 @@ const MONASTERIES = [
     description:
       "Revered as the 'Venerated Central Glory', Tashiding is vital to Sikkimese monasticism, its sublime mountain site and stupa are iconic. A single image is said to cleanse one's sins.",
     image: "/monasteries/tashiding.png",
+    slug: "tashiding",
   },
   {
     name: "Pemayangtse Monastery",
@@ -19,6 +21,7 @@ const MONASTERIES = [
     description:
       "Meaning 'Perfect Sublime Lotus', Pemayangtse stands among Sikkim's oldest monasteries, embodying purity and spiritual vision for a perfect world.",
     image: "/monasteries/pemayangtse.jpg",
+    slug: null,
   },
   {
     name: "Dubdi Monastery",
@@ -28,6 +31,7 @@ const MONASTERIES = [
     description:
       "The 'Hermit's Cell', Dubdi, is Sikkim's first monastery, its stone chapel marking the crowning of the kingdom's Buddhist order.",
     image: "/monasteries/dubdi.png",
+    slug: "dubdi",
   },
   {
     name: "Rumtek Monastery",
@@ -37,6 +41,7 @@ const MONASTERIES = [
     description:
       "Grand and imposing, Rumtek is the Dharma Chakra Centre, stunning, alive with ritual, color, and living tradition.",
     image: "/monasteries/rumtek.jpg",
+    slug: "rumtek",
   },
 ];
 
@@ -139,7 +144,14 @@ export default function MonasterySlideshow() {
               <div className="px-12 py-8 flex-1 flex flex-col justify-center h-full bg-[#e5e5e5]" style={{ minHeight: '100%' }}>
                 <div className="flex flex-col justify-center h-full">
                   <p className="text-xl font-merriweather text-black mb-8 leading-relaxed">{m.description}</p>
-                  <span className="inline-block bg-amber-400 text-black font-cinzel px-8 py-3 rounded-full text-lg self-start">Slide In</span>
+                  {m.slug ? (
+                    <Link
+                      href={`/all-monasteries/${m.slug}`}
+                      className="inline-block bg-amber-400 text-black font-cinzel px-8 py-3 rounded-full text-lg self-start hover:bg-amber-300 transition-colors"
+                    >Slide In</Link>
+                  ) : (
+                    <span className="inline-block bg-amber-400 text-black font-cinzel px-8 py-3 rounded-full text-lg self-start">Slide In</span>
+                  )}
                 </div>
               </div>
               {/* Details Box */}
