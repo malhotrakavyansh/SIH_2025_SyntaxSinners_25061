@@ -102,7 +102,7 @@ def upload_archive_item(
         shutil.copyfileobj(file.file, f)
 
     try:
-        ocr_text = ocr.extract_text(bodhi.client, str(image_path))
+        ocr_text = ocr.extract_text(str(image_path))
     except Exception as e:
         ocr_text = f"OCR failed: {e}"
 

@@ -1,19 +1,8 @@
-from google import genai
-from PIL import Image
-
-OCR_PROMPT = (
-    "Extract and transcribe all visible text from this image exactly as it appears. "
-    "Preserve the original script (Tibetan, Devanagari, Sanskrit, English, etc.) rather "
-    "than translating or transliterating it. If the image contains no legible text "
-    "(e.g. it is pure artwork with no writing), respond with exactly: NO_TEXT_DETECTED"
-)
+from tibetan_ocr.pipeline import extract_text as _extract_text
 
 
-def extract_text(client: genai.Client, image_path: str) -> str:
-    """Runs OCR on an image via Gemini's multimodal vision, returning the transcribed text."""
-    img = Image.open(image_path)
-    resp = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[OCR_PROMPT, img],
-    )
-    return resp.text.strip()
+def extract_text(image_path: str) -> str:
+    """Runs the Digital Archive's Tibetan OCR pipeline: real line detection followed by
+    per-line character recognition (BDRC's trained ONNX models), not a generative model
+    transcribing freely - see tibetan_ocr/pipeline.py for why that distinction matters."""
+    return _extract_text(image_path)

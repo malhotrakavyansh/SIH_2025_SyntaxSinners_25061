@@ -5,6 +5,7 @@ __pycache__/
 chroma_db/
 archive.db
 archive_uploads/
+tibetan_ocr/models/
 
 # Node / Next
 node_modules/

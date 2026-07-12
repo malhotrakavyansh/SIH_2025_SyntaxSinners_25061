@@ -7,3 +7,7 @@ pydantic
 sentence-transformers
 pillow
 python-multipart
+onnxruntime
+opencv-python-headless
+pyewts
+requests
