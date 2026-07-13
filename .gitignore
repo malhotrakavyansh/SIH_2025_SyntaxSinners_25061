@@ -6,6 +6,7 @@ chroma_db/
 archive.db
 users.db
 submissions.db
+monasteries.db
 archive_uploads/
 tibetan_ocr/models/
 

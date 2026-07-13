@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import os
+import re
 import shutil
 import sqlite3
 import uuid
@@ -17,6 +18,7 @@ from dotenv import load_dotenv
 from chatbot import BodhiChatbot
 import archive_store
 import booking_store
+import monasteries_store
 import ocr
 import submissions_store
 import users_store
@@ -70,6 +72,7 @@ archive_store.init_db()
 booking_store.init_db()
 users_store.init_db()
 submissions_store.init_db()
+monasteries_store.init_db()
 
 # Define the JSON schemas for requests and responses
 class ChatRequest(BaseModel):
@@ -550,3 +553,216 @@ def admin_reject_submission(
 
     updated = submissions_store.update_status(submission_id, "rejected", request.review_note)
     return {"success": True, "submission": updated}
+
+
+class MonasterySections(BaseModel):
+    overview: str = ""
+    history: str = ""
+    architecture: str = ""
+    rituals: str = ""
+    bestVisitTime: str = ""
+    travelInfo: str = ""
+
+
+class MonasteryRequest(BaseModel):
+    name: str
+    slug: str = ""
+    location: str = ""
+    altitude: str = ""
+    founded: str = ""
+    shortDescription: str = ""
+    heroImageUrl: str = ""
+    gallery: list[str] = []
+    sections: MonasterySections = MonasterySections()
+    historicalPeriod: str = ""
+    sourceReferences: str = ""
+    isPublished: bool = False
+
+
+@app.get("/monasteries")
+def list_public_monasteries():
+    return {"monasteries": monasteries_store.list_monasteries(published_only=True)}
+
+
+@app.get("/monasteries/{slug}")
+def get_public_monastery(slug: str):
+    monastery = monasteries_store.get_monastery_by_slug(slug)
+    if monastery is None or not monastery["isPublished"]:
+        raise HTTPException(status_code=404, detail="Monastery not found.")
+    return {"monastery": monastery}
+
+
+@app.get("/api/admin/monasteries")
+def admin_list_monasteries(sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+    return {"monasteries": monasteries_store.list_monasteries(published_only=False)}
+
+
+@app.get("/api/admin/monasteries/{monastery_id}")
+def admin_get_monastery(monastery_id: str, sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+    monastery = monasteries_store.get_monastery(monastery_id)
+    if monastery is None:
+        raise HTTPException(status_code=404, detail="Monastery not found.")
+    return {"monastery": monastery}
+
+
+@app.post("/api/admin/monasteries")
+def admin_create_monastery(request: MonasteryRequest, sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+    monastery = monasteries_store.create_monastery(request.model_dump())
+    return {"success": True, "monastery": monastery}
+
+
+@app.put("/api/admin/monasteries/{monastery_id}")
+def admin_update_monastery(
+    monastery_id: str,
+    request: MonasteryRequest,
+    sangha_session: str | None = Cookie(default=None),
+):
+    _require_admin(sangha_session)
+    monastery = monasteries_store.update_monastery(monastery_id, request.model_dump())
+    if monastery is None:
+        raise HTTPException(status_code=404, detail="Monastery not found.")
+    return {"success": True, "monastery": monastery}
+
+
+@app.delete("/api/admin/monasteries/{monastery_id}")
+def admin_delete_monastery(monastery_id: str, sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+    if not monasteries_store.delete_monastery(monastery_id):
+        raise HTTPException(status_code=404, detail="Monastery not found.")
+    return {"success": True}
+
+
+class VerifyMonasteryRequest(BaseModel):
+    name: str
+    location: str
+    altitude: str = ""
+    founded: str = ""
+    description: str = ""
+
+
+@app.post("/api/verify-monastery")
+def verify_monastery(request: VerifyMonasteryRequest, sangha_session: str | None = Cookie(default=None)):
+    """Sanity-checks admin-entered monastery facts with Gemini before they can be
+    saved, mirroring the fact-check gate the team's Node backend ran via Groq."""
+    _require_admin(sangha_session)
+
+    claim = (
+        f"{request.name} is a monastery located in {request.location}"
+        + (f" at {request.altitude} altitude" if request.altitude else "")
+        + (f", founded in {request.founded}" if request.founded else "")
+        + (f". {request.description}" if request.description else "")
+    )
+    system_prompt = (
+        "You are a fact-checker specializing in Buddhist monasteries and religious sites in the "
+        "Himalayan region (Sikkim, Darjeeling, Nepal, Bhutan, Tibet). Verify the following claim.\n\n"
+        "Respond ONLY in this exact format:\n"
+        "VERDICT: [TRUE / FALSE / PARTIALLY TRUE / UNVERIFIABLE]\n"
+        "REASON: [One sentence explanation]"
+    )
+
+    try:
+        resp = bodhi.client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"{system_prompt}\n\nClaim: {claim}",
+        )
+        raw_text = resp.text or ""
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Verification service failed: {e}")
+
+    verdict_match = re.search(r"VERDICT:\s*(TRUE|FALSE|PARTIALLY TRUE|UNVERIFIABLE)", raw_text, re.IGNORECASE)
+    reason_match = re.search(r"REASON:\s*(.+)", raw_text, re.IGNORECASE)
+
+    verdict = verdict_match.group(1).upper() if verdict_match else "UNVERIFIABLE"
+    reason = reason_match.group(1).strip() if reason_match else raw_text.strip()
+    approved = verdict in ("TRUE", "PARTIALLY TRUE")
+
+    return {
+        "success": True,
+        "data": {"approved": approved, "verdict": verdict, "reason": reason, "claim": claim},
+    }
+
+
+@app.get("/api/admin/dashboard/stats")
+def admin_dashboard_stats(sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+
+    submissions = submissions_store.list_submissions()
+    monasteries = monasteries_store.list_monasteries()
+
+    total_monasteries = len(monasteries)
+    published_monasteries = sum(1 for m in monasteries if m["isPublished"])
+    pending_submissions = sum(1 for s in submissions if s["status"] == "pending")
+    contributors = len({s["contributorId"] for s in submissions})
+
+    return {
+        "success": True,
+        "data": {
+            "totalMonasteries": total_monasteries,
+            "pendingSubmissions": pending_submissions,
+            "publishedMonasteries": published_monasteries,
+            "contributors": contributors,
+            "totalSubmissions": len(submissions),
+        },
+    }
+
+
+@app.get("/api/admin/dashboard/activity")
+def admin_dashboard_activity(sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+
+    activity = []
+    for sub in submissions_store.list_submissions()[:5]:
+        activity.append({
+            "id": sub["id"],
+            "action": "approved" if sub["status"] == "approved" else "submitted",
+            "user": sub["contributorName"],
+            "target": sub["title"],
+            "timestamp": sub["reviewedAt"] or sub["createdAt"],
+            "type": "submission",
+        })
+    for mon in monasteries_store.list_monasteries()[:5]:
+        activity.append({
+            "id": mon["id"],
+            "action": "published" if mon["isPublished"] else "updated",
+            "user": "Admin",
+            "target": mon["name"],
+            "timestamp": mon["updatedAt"],
+            "type": "monastery",
+        })
+
+    activity.sort(key=lambda a: a["timestamp"], reverse=True)
+    return {"success": True, "data": activity[:10]}
+
+
+@app.get("/api/admin/dashboard/contributors")
+def admin_dashboard_contributors(sangha_session: str | None = Cookie(default=None)):
+    _require_admin(sangha_session)
+
+    by_contributor: dict[str, dict] = {}
+    for sub in submissions_store.list_submissions():
+        entry = by_contributor.setdefault(sub["contributorId"], {
+            "id": sub["contributorId"],
+            "name": sub["contributorName"],
+            "email": "",
+            "submissions": 0,
+            "approved": 0,
+            "pendingReview": 0,
+            "lastSubmission": sub["createdAt"],
+        })
+        entry["submissions"] += 1
+        if sub["status"] == "approved":
+            entry["approved"] += 1
+        elif sub["status"] == "pending":
+            entry["pendingReview"] += 1
+        if sub["createdAt"] > entry["lastSubmission"]:
+            entry["lastSubmission"] = sub["createdAt"]
+
+    for entry in by_contributor.values():
+        contributor_user = users_store.get_user_by_id(entry["id"])
+        entry["email"] = contributor_user["email"] if contributor_user else ""
+
+    contributors = sorted(by_contributor.values(), key=lambda c: c["submissions"], reverse=True)
+    return {"success": True, "data": contributors}
