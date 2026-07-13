@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from chatbot import BodhiChatbot
 import archive_store
+import booking_store
 import ocr
 
 # Load environment variables
@@ -42,6 +43,7 @@ app.mount("/archive_uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="arch
 
 bodhi = BodhiChatbot(api_key=api_key)
 archive_store.init_db()
+booking_store.init_db()
 
 # Define the JSON schemas for requests and responses
 class ChatRequest(BaseModel):
@@ -155,3 +157,58 @@ def upload_archive_item(
         ocrText=ocr_text,
         tags=tag_list,
     )
+
+class BookingResponse(BaseModel):
+    success: bool
+    orderId: str
+    bookingId: str
+    amount: float
+    message: str
+
+def _create_booking(booking_type: str, payload: dict) -> BookingResponse:
+    """Shared logic behind every /api/create-*-booking endpoint: the Experiences pages
+    all follow the same pattern (pick something, pay, get a bookingId back) - only the
+    payload fields differ per booking type, so there's one real implementation here."""
+    amount = payload.get("amount")
+    if amount is None:
+        raise HTTPException(status_code=400, detail="Missing required field: amount")
+
+    booking_id = f"BOOK_{uuid.uuid4().hex[:10].upper()}"
+    order_id = f"ORDER_{uuid.uuid4().hex[:8].upper()}"
+    booking_store.add_booking(booking_id, order_id, booking_type, float(amount), payload)
+
+    return BookingResponse(
+        success=True,
+        orderId=order_id,
+        bookingId=booking_id,
+        amount=float(amount),
+        message="Order created and payment confirmed.",
+    )
+
+@app.post("/api/create-order", response_model=BookingResponse)
+def create_tour_guide_order(payload: dict):
+    return _create_booking("tour_guide", payload)
+
+@app.post("/api/create-meditation-booking", response_model=BookingResponse)
+def create_meditation_booking(payload: dict):
+    return _create_booking("meditation", payload)
+
+@app.post("/api/create-accommodation-booking", response_model=BookingResponse)
+def create_accommodation_booking(payload: dict):
+    return _create_booking("accommodation", payload)
+
+@app.post("/api/create-transport-booking", response_model=BookingResponse)
+def create_transport_booking(payload: dict):
+    return _create_booking("transport", payload)
+
+@app.get("/api/booking/{booking_id}")
+def get_booking(booking_id: str):
+    booking = booking_store.get_booking(booking_id)
+    if booking is None:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    return {"success": True, "booking": booking}
+
+@app.get("/api/bookings")
+def list_bookings():
+    bookings = booking_store.list_bookings()
+    return {"success": True, "bookings": bookings, "total": len(bookings)}
