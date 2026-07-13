@@ -104,7 +104,8 @@ def upload_archive_item(
     try:
         ocr_text = ocr.extract_text(str(image_path))
     except Exception as e:
-        ocr_text = f"OCR failed: {e}"
+        print(f"OCR failed for {image_path}: {e}")
+        ocr_text = "OCR unavailable for this item."
 
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
 

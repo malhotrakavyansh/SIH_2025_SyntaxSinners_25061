@@ -5,13 +5,15 @@ import numpy as np
 
 class GreedyCTCDecoder:
     """Standard greedy CTC decode: argmax per timestep, collapse repeats, drop blank
-    (index 0). Also returns a confidence score (mean max-softmax-probability across
-    timesteps) so callers can compare predictions from different models."""
+    (index 0). Also returns confidence scores (mean and min max-softmax-probability
+    across timesteps) so callers can compare predictions from different models, and
+    catch cases where most of a line decoded confidently but one character (e.g. a
+    digit) didn't."""
 
     def __init__(self, charset: List[str]):
         self.vocab = [" "] + list(charset)  # index 0 reserved for CTC blank
 
-    def decode(self, logits: np.ndarray) -> Tuple[str, float]:
+    def decode(self, logits: np.ndarray) -> Tuple[str, float, float]:
         probs = _softmax(logits, axis=-1)
         idx = np.argmax(probs, axis=-1)
         max_probs = np.max(probs, axis=-1)
@@ -26,8 +28,9 @@ class GreedyCTCDecoder:
             prev = i
 
         text = "".join(chars)
-        confidence = float(np.mean(confidences)) if confidences else 0.0
-        return text, confidence
+        mean_confidence = float(np.mean(confidences)) if confidences else 0.0
+        min_confidence = float(np.min(confidences)) if confidences else 0.0
+        return text, mean_confidence, min_confidence
 
 
 def _softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:

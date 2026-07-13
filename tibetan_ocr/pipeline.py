@@ -41,10 +41,23 @@ class TibetanOCRPipeline:
 
         self.wylie_converter = pyewts.pyewts()
 
+    # Below this per-character confidence, flag the line rather than present a possibly
+    # garbled character (numerals in particular) as if it were a clean read. Calibrated
+    # against real eval data: genuine misreads scored 0.31-0.44 min-confidence, while
+    # correctly-read lines (some containing naturally lower-confidence characters) scored
+    # 0.45 and up - not a hard guarantee, but a reasonable separation on that sample.
+    LOW_CONFIDENCE_THRESHOLD = 0.45
+
     def _recognize_line(self, line_image: npt.NDArray) -> str:
         candidates = [model.run(line_image) for model in self.ocr_models]
-        text, _confidence = max(candidates, key=lambda c: c[1])
-        return self.wylie_converter.toUnicode(text) if text else ""
+        text, _mean_confidence, min_confidence = max(candidates, key=lambda c: c[1])
+        if not text:
+            return ""
+
+        unicode_text = self.wylie_converter.toUnicode(text)
+        if min_confidence < self.LOW_CONFIDENCE_THRESHOLD:
+            unicode_text = f"[low-confidence] {unicode_text}"
+        return unicode_text
 
     def run(self, image: npt.NDArray) -> str:
         line_mask = self.line_detector.predict(image)

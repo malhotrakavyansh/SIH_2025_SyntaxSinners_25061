@@ -97,7 +97,7 @@ class OCRInference:
         patch = np.full((h, h, c), 255, dtype=np.uint8)
         return np.hstack([patch, image, patch])
 
-    def run(self, line_image: npt.NDArray, pre_pad: bool = True) -> Tuple[str, float]:
+    def run(self, line_image: npt.NDArray, pre_pad: bool = True) -> Tuple[str, float, float]:
         if pre_pad:
             line_image = self._pre_pad(line_image)
         line_image = self._prepare_line(line_image)
@@ -117,5 +117,5 @@ class OCRInference:
         if logits.shape[0] == len(self.decoder.vocab):
             logits = np.transpose(logits, axes=[1, 0])  # -> (time, vocab)
 
-        text, confidence = self.decoder.decode(logits)
-        return text.replace("§", " ").strip(), confidence
+        text, mean_confidence, min_confidence = self.decoder.decode(logits)
+        return text.replace("§", " ").strip(), mean_confidence, min_confidence
