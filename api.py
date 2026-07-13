@@ -77,6 +77,29 @@ def chat_with_bodhi(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class OcrResponse(BaseModel):
+    text: str
+
+@app.post("/ocr/extract", response_model=OcrResponse)
+def extract_ocr_text(file: UploadFile = File(...)):
+    """Runs an uploaded image through the Tibetan OCR pipeline and returns the
+    transcription directly, with no archive metadata/storage involved."""
+    extension = Path(file.filename or "upload").suffix or ".jpg"
+    temp_path = UPLOAD_DIR / f"ocr_tmp_{uuid.uuid4().hex}{extension}"
+
+    with temp_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    try:
+        text = ocr.extract_text(str(temp_path))
+    except Exception as e:
+        print(f"OCR failed for {temp_path}: {e}")
+        raise HTTPException(status_code=500, detail="OCR failed for this image.")
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+    return OcrResponse(text=text)
+
 @app.get("/archive", response_model=list[ArchiveItem])
 def list_archive_items():
     """Returns every archived artifact, OCR'd from the actual uploaded image."""

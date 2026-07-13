@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Nav from "./Nav";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -489,7 +490,14 @@ export default function DigitalArchivePage() {
               <Chip key={t} onRemove={() => toggleType(t)}>{t}</Chip>
             ))}
             {aiOnly && <Chip onRemove={() => setAiOnly(false)}>AI/OCR</Chip>}
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-3">
+              <Link
+                href="/tibetan-ocr"
+                className="inline-flex items-center px-4 py-2 shadow-sm pop-btn text-sm font-medium"
+                style={{ borderRadius: "0.875rem", border: "1px solid #D4AF37", color: "#5B2C2C", background: "#F8F4EA" }}
+              >
+                Tibetan OCR
+              </Link>
               <UploadForm onUploaded={(item) => setItems((prev) => [item, ...prev])} />
             </div>
           </div>
