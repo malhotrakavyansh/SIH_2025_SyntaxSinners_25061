@@ -203,11 +203,10 @@ class RazorpayOrderResponse(BaseModel):
     currency: str
     keyId: str
 
-@app.post("/api/create-order", response_model=RazorpayOrderResponse)
-def create_tour_guide_order(payload: dict):
-    """Creates a real Razorpay order for a tour-guide booking. Nothing is confirmed or
-    stored as a real booking yet - that only happens once /api/verify-payment confirms
-    the payment actually went through and the signature checks out."""
+def _create_razorpay_order(booking_type: str, payload: dict) -> RazorpayOrderResponse:
+    """Creates a real Razorpay order. Nothing is confirmed or stored as a real booking
+    yet - that only happens once /api/verify-payment confirms the payment actually went
+    through and the signature checks out."""
     if razorpay_client is None or not RAZORPAY_KEY_ID:
         raise HTTPException(status_code=503, detail="Payments are not configured on this server.")
 
@@ -221,7 +220,7 @@ def create_tour_guide_order(payload: dict):
         "payment_capture": 1,
     })
 
-    booking_store.add_pending_booking(order["id"], "tour_guide", float(amount), payload)
+    booking_store.add_pending_booking(order["id"], booking_type, float(amount), payload)
 
     return RazorpayOrderResponse(
         success=True,
@@ -230,6 +229,10 @@ def create_tour_guide_order(payload: dict):
         currency="INR",
         keyId=RAZORPAY_KEY_ID,
     )
+
+@app.post("/api/create-order", response_model=RazorpayOrderResponse)
+def create_tour_guide_order(payload: dict):
+    return _create_razorpay_order("tour_guide", payload)
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -272,9 +275,9 @@ def verify_payment(request: VerifyPaymentRequest):
         message="Payment verified and booking confirmed.",
     )
 
-@app.post("/api/create-meditation-booking", response_model=BookingResponse)
+@app.post("/api/create-meditation-booking", response_model=RazorpayOrderResponse)
 def create_meditation_booking(payload: dict):
-    return _create_booking("meditation", payload)
+    return _create_razorpay_order("meditation", payload)
 
 @app.post("/api/create-accommodation-booking", response_model=BookingResponse)
 def create_accommodation_booking(payload: dict):
