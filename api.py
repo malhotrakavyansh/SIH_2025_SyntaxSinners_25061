@@ -474,3 +474,79 @@ def create_submission(
 def list_my_submissions(sangha_session: str | None = Cookie(default=None)):
     user = _require_user(sangha_session)
     return {"submissions": submissions_store.list_submissions_by_contributor(user["id"])}
+
+
+def _require_admin(sangha_session: str | None) -> dict:
+    user = _require_user(sangha_session)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return user
+
+
+class ReviewRequest(BaseModel):
+    review_note: str = ""
+
+
+@app.get("/api/admin/submissions")
+def admin_list_submissions(
+    status: str | None = None,
+    sangha_session: str | None = Cookie(default=None),
+):
+    _require_admin(sangha_session)
+    return {"submissions": submissions_store.list_submissions(status=status)}
+
+
+@app.get("/api/admin/submissions/{submission_id}")
+def admin_get_submission(
+    submission_id: str,
+    sangha_session: str | None = Cookie(default=None),
+):
+    _require_admin(sangha_session)
+    submission = submissions_store.get_submission(submission_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    return {"submission": submission}
+
+
+@app.post("/api/admin/submissions/{submission_id}/approve")
+def admin_approve_submission(
+    submission_id: str,
+    sangha_session: str | None = Cookie(default=None),
+):
+    _require_admin(sangha_session)
+    submission = submissions_store.get_submission(submission_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    if submission["status"] != "pending":
+        raise HTTPException(status_code=409, detail="Submission has already been reviewed.")
+
+    archive_store.add_item({
+        "id": submission["id"],
+        "title": submission["title"],
+        "monastery": submission["monastery"],
+        "type": submission["type"],
+        "year": submission["year"],
+        "location": submission["location"],
+        "image_filename": submission["imageFilename"],
+        "ocr_text": submission["ocrText"],
+        "tags": submission["tags"],
+    })
+    updated = submissions_store.update_status(submission_id, "approved")
+    return {"success": True, "submission": updated}
+
+
+@app.post("/api/admin/submissions/{submission_id}/reject")
+def admin_reject_submission(
+    submission_id: str,
+    request: ReviewRequest,
+    sangha_session: str | None = Cookie(default=None),
+):
+    _require_admin(sangha_session)
+    submission = submissions_store.get_submission(submission_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    if submission["status"] != "pending":
+        raise HTTPException(status_code=409, detail="Submission has already been reviewed.")
+
+    updated = submissions_store.update_status(submission_id, "rejected", request.review_note)
+    return {"success": True, "submission": updated}
