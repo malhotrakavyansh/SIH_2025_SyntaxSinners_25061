@@ -36,6 +36,19 @@ def _mask_n_crop(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return image_masked
 
 
+def _long_edge_angle(cnt) -> float:
+    """Angle (degrees) of a contour's longer axis relative to horizontal, in (-90, 90].
+    cv2.minAreaRect's own angle field has a version-dependent convention for which side
+    it measures from (OpenCV changed it around 4.5.1) - computing it directly from the
+    box's longer edge vector instead sidesteps that ambiguity entirely."""
+    box = cv2.boxPoints(cv2.minAreaRect(cnt))
+    edge1 = box[1] - box[0]
+    edge2 = box[2] - box[1]
+    long_edge = edge1 if np.hypot(*edge1) >= np.hypot(*edge2) else edge2
+    angle = np.degrees(np.arctan2(long_edge[1], long_edge[0]))
+    return ((angle + 90) % 180) - 90
+
+
 def _get_rotation_angle_from_lines(line_mask: npt.NDArray, max_angle: float = 5.0) -> float:
     contours, _ = cv2.findContours(line_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     mask_threshold = (line_mask.shape[0] * line_mask.shape[1]) * 0.001
@@ -43,7 +56,9 @@ def _get_rotation_angle_from_lines(line_mask: npt.NDArray, max_angle: float = 5.
     if not contours:
         return 0.0
 
-    angles = [cv2.minAreaRect(x)[2] for x in contours]
+    # Text lines are wide and short, so their long edge is expected to run near-horizontal
+    # (angle close to 0); a real page skew shows up as a consistent small offset from 0.
+    angles = [_long_edge_angle(x) for x in contours]
     low_angles = [x for x in angles if abs(x) != 0.0 and x < max_angle]
     high_angles = [x for x in angles if abs(x) != 90.0 and x > (90 - max_angle)]
 
