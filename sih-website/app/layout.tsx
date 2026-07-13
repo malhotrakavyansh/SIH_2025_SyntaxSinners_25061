@@ -7,6 +7,7 @@ import GlitterCursorTrail from "../components/GlitterCursorTrail";
 import Footer from "../components/Footer";
 import BackgroundAudio from "../components/BackgroundAudio";
 import { LanguageProvider } from "../components/LanguageProvider";
+import { AuthProvider } from "../components/AuthProvider";
 
 const poppins = Poppins({ subsets: ["latin"], weight: "800", variable: "--font-poppins" });
 const lora = Lora({ subsets: ["latin"], style: "italic", variable: "--font-lora" });
@@ -19,13 +20,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${poppins.variable} ${lora.variable} ${cinzel.variable} ${cinzelDec.variable} ${merriweather.variable} ${notoDevanagari.variable}`}>
       <body className="bg-white text-black antialiased">
-        <LanguageProvider>
-          <BackgroundAudio />
-          <GlitterCursorTrail />
-          {children}
-          <BodhiChatbot />
-          <Footer />
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <BackgroundAudio />
+            <GlitterCursorTrail />
+            {children}
+            <BodhiChatbot />
+            <Footer />
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

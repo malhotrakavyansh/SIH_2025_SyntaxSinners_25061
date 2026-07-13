@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useAuth } from "./AuthProvider";
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { user, loading, logout } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -63,6 +65,25 @@ export default function Nav() {
               />
             </form>
 
+            {!loading && (
+              <div className="hidden sm:flex items-center gap-3 text-sm">
+                {user ? (
+                  <>
+                    {user.role === "admin" && (
+                      <Link href="/admin" className="uppercase tracking-wider hover:opacity-80">Admin</Link>
+                    )}
+                    <span className="text-white/80">{user.name}</span>
+                    <button onClick={() => logout()} className="uppercase tracking-wider hover:opacity-80">Log out</button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="uppercase tracking-wider hover:opacity-80">Log in</Link>
+                    <Link href="/register" className="uppercase tracking-wider hover:opacity-80">Register</Link>
+                  </>
+                )}
+              </div>
+            )}
+
             <button
               aria-label="Menu"
               onClick={() => setOpen(!open)}
@@ -82,6 +103,21 @@ export default function Nav() {
               <li><a href="#monastery-slideshow" onClick={()=>setOpen(false)}>Overview</a></li>
               <li><a href="#monastery-map" onClick={()=>setOpen(false)}>Map</a></li>
               <li><Link href="/archive" onClick={()=>setOpen(false)}>Digital Archive</Link></li>
+              {user ? (
+                <>
+                  {user.role === "admin" && (
+                    <li><Link href="/admin" onClick={()=>setOpen(false)}>Admin</Link></li>
+                  )}
+                  <li>
+                    <button onClick={() => { logout(); setOpen(false); }}>Log out ({user.name})</button>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li><Link href="/login" onClick={()=>setOpen(false)}>Log in</Link></li>
+                  <li><Link href="/register" onClick={()=>setOpen(false)}>Register</Link></li>
+                </>
+              )}
             </ul>
           </div>
         )}

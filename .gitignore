@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 chroma_db/
 archive.db
+users.db
 archive_uploads/
 tibetan_ocr/models/
 

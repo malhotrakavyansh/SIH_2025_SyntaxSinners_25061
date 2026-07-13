@@ -2,11 +2,14 @@ import hashlib
 import hmac
 import os
 import shutil
+import sqlite3
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import jwt
 import razorpay
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -15,6 +18,7 @@ from chatbot import BodhiChatbot
 import archive_store
 import booking_store
 import ocr
+import users_store
 
 # Load environment variables
 load_dotenv()
@@ -31,6 +35,13 @@ razorpay_client = (
     else None
 )
 
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-only-insecure-secret-change-me")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_DAYS = 7
+ADMIN_EMAILS = {
+    e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()
+}
+
 UPLOAD_DIR = Path(__file__).parent / "archive_uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
@@ -46,6 +57,7 @@ allowed_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -55,6 +67,7 @@ app.mount("/archive_uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="arch
 bodhi = BodhiChatbot(api_key=api_key)
 archive_store.init_db()
 booking_store.init_db()
+users_store.init_db()
 
 # Define the JSON schemas for requests and responses
 class ChatRequest(BaseModel):
@@ -298,3 +311,101 @@ def get_booking(booking_id: str):
 def list_bookings():
     bookings = booking_store.list_bookings()
     return {"success": True, "bookings": bookings, "total": len(bookings)}
+
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+
+
+COOKIE_NAME = "sangha_session"
+
+
+def _create_token(user: dict) -> str:
+    payload = {
+        "sub": user["id"],
+        "role": user["role"],
+        "exp": datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRY_DAYS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _decode_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=JWT_EXPIRY_DAYS * 24 * 60 * 60,
+        path="/",
+    )
+
+
+@app.post("/api/auth/register", response_model=UserResponse)
+def register(request: RegisterRequest, response: Response):
+    """New accounts default to the 'contributor' role. Emails listed in the ADMIN_EMAILS
+    env var are promoted to 'admin' at registration time - there's no invite flow yet."""
+    if len(request.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if not request.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required.")
+
+    role = "admin" if request.email.strip().lower() in ADMIN_EMAILS else "contributor"
+    try:
+        user = users_store.create_user(request.name.strip(), request.email, request.password, role=role)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+
+    token = _create_token(user)
+    _set_session_cookie(response, token)
+    return UserResponse(**user)
+
+
+@app.post("/api/auth/login", response_model=UserResponse)
+def login(request: LoginRequest, response: Response):
+    user = users_store.verify_user(request.email, request.password)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    token = _create_token(user)
+    _set_session_cookie(response, token)
+    return UserResponse(**user)
+
+
+@app.post("/api/auth/logout")
+def logout(response: Response):
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return {"success": True}
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+def get_current_user(sangha_session: str | None = Cookie(default=None)):
+    if sangha_session is None:
+        raise HTTPException(status_code=401, detail="Not logged in.")
+    payload = _decode_token(sangha_session)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Session expired or invalid.")
+    user = users_store.get_user_by_id(payload["sub"])
+    if user is None:
+        raise HTTPException(status_code=401, detail="User no longer exists.")
+    return UserResponse(**user)

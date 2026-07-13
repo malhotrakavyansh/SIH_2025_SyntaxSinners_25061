@@ -11,3 +11,6 @@ onnxruntime
 opencv-python-headless
 pyewts
 requests
+razorpay
+bcrypt
+pyjwt
