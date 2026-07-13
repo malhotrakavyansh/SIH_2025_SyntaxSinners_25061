@@ -2,11 +2,18 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
+import Script from "next/script"
 import { useRouter } from "next/navigation"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void }
+  }
+}
 
 interface TourGuide {
   id: number
@@ -112,10 +119,10 @@ export default function TourGuideBookingPage() {
   const [currentStep, setCurrentStep] = useState<'datetime' | 'payment' | 'confirm'>('datetime')
   const [isProcessing, setIsProcessing] = useState(false)
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
-  const [showQRCode, setShowQRCode] = useState(false)
-
-  const UPI_ID = "anshjayara.edu@okaxis"
-  const PAYEE_NAME = "Ansh Jayara"
+  const [razorpayReady, setRazorpayReady] = useState(false)
+  const [customerName, setCustomerName] = useState("")
+  const [customerEmail, setCustomerEmail] = useState("")
+  const [customerPhone, setCustomerPhone] = useState("")
 
   // Date restrictions
   const MIN_DATE = new Date(2025, 11, 8) // December 8, 2025 (month is 0-indexed)
@@ -129,29 +136,28 @@ export default function TourGuideBookingPage() {
     { value: "15:00", label: "3:00 PM" }
   ]
 
-  const buildUpiLink = () => {
-    if (!selectedGuide || !bookingDate || !bookingTime) return null
-
-    const formattedDate = bookingDate.toLocaleDateString('en-GB')
-    const intent = new URL("upi://pay")
-    intent.searchParams.set("pa", UPI_ID)
-    intent.searchParams.set("pn", PAYEE_NAME)
-    intent.searchParams.set("am", `${selectedGuide.price}`)
-    intent.searchParams.set("cu", "INR")
-    intent.searchParams.set("tn", `Guide: ${selectedGuide.name} on ${formattedDate} ${bookingTime}`)
-    return intent.toString()
-  }
-
-  const handlePaymentDone = async () => {
+  const handlePayWithRazorpay = async () => {
     if (!selectedGuide || !bookingDate || !bookingTime) {
       alert("Please select date and time before proceeding.")
+      return
+    }
+    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      alert("Please enter your name, email, and phone number before proceeding.")
+      return
+    }
+    if (!/^\d{10}$/.test(customerPhone.trim())) {
+      alert("Please enter a valid 10-digit phone number.")
+      return
+    }
+    if (!razorpayReady || !window.Razorpay) {
+      alert("Payment is still loading, please try again in a moment.")
       return
     }
 
     setIsProcessing(true)
     try {
       const formattedDate = bookingDate.toISOString().split('T')[0]
-      const response = await fetch(`${BACKEND_URL}/api/create-order`, {
+      const orderRes = await fetch(`${BACKEND_URL}/api/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,24 +166,61 @@ export default function TourGuideBookingPage() {
           date: formattedDate,
           time: bookingTime,
           amount: selectedGuide.price,
-          userName: "User",
-          userEmail: "user@example.com",
+          userName: customerName.trim(),
+          userEmail: customerEmail.trim(),
+          userPhone: customerPhone.trim(),
         }),
       })
 
-      const data = await response.json()
-      if (data.success && data.bookingId) {
-        setBookingConfirmed(true)
-        setCurrentStep('confirm')
-      } else {
-        alert("Failed to create booking. Please try again.")
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}))
+        throw new Error(err.detail || "Could not start payment.")
       }
+      const order = await orderRes.json()
+
+      const razorpay = new window.Razorpay({
+        key: order.keyId,
+        amount: Math.round(order.amount * 100),
+        currency: order.currency,
+        name: "Sangha",
+        description: `Tour guide booking: ${selectedGuide.name}`,
+        order_id: order.razorpayOrderId,
+        prefill: {
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+          contact: customerPhone.trim(),
+        },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            const verifyRes = await fetch(`${BACKEND_URL}/api/verify-payment`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response),
+            })
+            const data = await verifyRes.json()
+            if (verifyRes.ok && data.success && data.bookingId) {
+              setBookingConfirmed(true)
+              setCurrentStep('confirm')
+              router.push(`/booking-success?bookingId=${data.bookingId}`)
+            } else {
+              alert("Payment verification failed. If money was deducted, contact support.")
+            }
+          } catch (err) {
+            console.error("Verification error:", err)
+            alert("Payment verification failed. If money was deducted, contact support.")
+          } finally {
+            setIsProcessing(false)
+          }
+        },
+        modal: {
+          ondismiss: () => setIsProcessing(false),
+        },
+        theme: { color: "#d4af37" },
+      })
+      razorpay.open()
     } catch (error) {
       console.error("Booking error:", error)
-      // Fallback: create a local booking ID and proceed
-      const localBookingId = `TOUR-${Date.now()}`
-      router.push(`/booking-success?bookingId=${localBookingId}`)
-    } finally {
+      alert(error instanceof Error ? error.message : "Failed to start payment. Please try again.")
       setIsProcessing(false)
     }
   }
@@ -194,45 +237,20 @@ export default function TourGuideBookingPage() {
     setSelectedGuide(guide)
     setBookingDate(null)
     setBookingTime("")
+    setCustomerName("")
+    setCustomerEmail("")
+    setCustomerPhone("")
     setCurrentStep('datetime')
     setBookingConfirmed(false)
-      setShowQRCode(false)
     setShowModal(true)
   }
 
-  const openGPayLink = () => {
-    const link = buildUpiLink()
-    if (!link) {
-      alert("Please select date and time before starting payment.")
-      return
-    }
-
-    window.location.href = link
-  }
-
-  const copyUpiLink = async () => {
-    const link = buildUpiLink()
-    if (!link) {
-      alert("Please select date and time before copying the payment link.")
-      return
-    }
-
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(link)
-        alert("Payment link copied. If it did not open, paste it into your UPI app.")
-      } else {
-        throw new Error("Clipboard unavailable")
-      }
-    } catch (err) {
-      alert(`Payment link: ${link}`)
-    }
-  }
-
-  const upiLink = buildUpiLink()
-
   return (
     <div className="min-h-screen py-16 px-6 bg-gradient-to-b from-[#2b0d0d] via-[#5a1f1f] to-[#3b1212] text-white">
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        onLoad={() => setRazorpayReady(true)}
+      />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-12">
@@ -374,6 +392,45 @@ export default function TourGuideBookingPage() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-amber-200 text-sm font-poppins mb-2">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Full name"
+                  className="w-full px-4 py-2 bg-white/10 border border-amber-300/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-amber-300/50 font-poppins"
+                />
+              </div>
+
+              <div>
+                <label className="block text-amber-200 text-sm font-poppins mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-2 bg-white/10 border border-amber-300/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-amber-300/50 font-poppins"
+                />
+              </div>
+
+              <div>
+                <label className="block text-amber-200 text-sm font-poppins mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  className="w-full px-4 py-2 bg-white/10 border border-amber-300/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-amber-300/50 font-poppins"
+                />
+              </div>
+
               <div className="pt-2 border-t border-amber-300/20">
                 <p className="text-sm text-white/80 font-merriweather mb-1">
                   <span className="font-semibold">Price:</span> ₹{selectedGuide.price}
@@ -408,91 +465,34 @@ export default function TourGuideBookingPage() {
               </div>
             )}
 
-            {/* Step 2: Payment Details */}
+            {/* Step 2: Payment */}
             {currentStep === 'payment' && (
-              <>
-                {!showQRCode ? (
-                  <div className="mt-6 space-y-4">
-                    <div className="pt-3 border-t border-amber-300/20 space-y-3">
-                      <p className="text-lg text-amber-100 font-cinzel-decorative text-center">Payment Details</p>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-3 text-sm text-white/80 font-poppins bg-white/5 px-4 py-3 rounded-lg border border-amber-300/20">
-                          <span className="text-amber-200 font-semibold">UPI ID:</span>
-                          <span className="truncate">{UPI_ID}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 text-sm text-white/80 font-poppins bg-white/5 px-4 py-3 rounded-lg border border-amber-300/20">
-                          <span className="text-amber-200 font-semibold">Payee:</span>
-                          <span className="truncate">{PAYEE_NAME}</span>
-                        </div>
-                      </div>
+              <div className="mt-6 space-y-4">
+                <div className="pt-3 border-t border-amber-300/20 space-y-3">
+                  <p className="text-lg text-amber-100 font-cinzel-decorative text-center">Payment</p>
+                  <p className="text-sm text-white/70 font-merriweather text-center">
+                    You&apos;ll be redirected to Razorpay&apos;s secure checkout to pay ₹{selectedGuide?.price}.
+                  </p>
 
-                      <p className="text-xs text-white/60 font-merriweather text-center">Tap the button below to open Google Pay / UPI.</p>
-                      
-                      <button
-                        onClick={() => {
-                          openGPayLink()
-                          setShowQRCode(true)
-                        }}
-                        className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-300 text-black rounded-lg font-cinzel-decorative font-semibold hover:from-amber-400 hover:to-amber-200 transition-all text-lg"
-                      >
-                        PAY WITH GOOGLE PAY
-                      </button>
-                    </div>
+                  <button
+                    onClick={handlePayWithRazorpay}
+                    disabled={isProcessing || !razorpayReady}
+                    className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-300 text-black rounded-lg font-cinzel-decorative font-semibold hover:from-amber-400 hover:to-amber-200 transition-all text-lg disabled:opacity-50"
+                  >
+                    {isProcessing ? "Processing..." : `Pay ₹${selectedGuide?.price ?? ""} with Razorpay`}
+                  </button>
+                </div>
 
-                    <div className="flex gap-3 pt-4 border-t border-amber-300/20">
-                      <button
-                        onClick={() => setCurrentStep('datetime')}
-                        className="flex-1 py-2 border border-amber-300/50 text-amber-200 rounded-lg font-poppins hover:bg-white/5 transition-all"
-                      >
-                        Back
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-6 space-y-4">
-                    <div className="pt-3 border-t border-amber-300/20 space-y-3">
-                      <p className="text-lg text-amber-100 font-cinzel-decorative text-center">Complete Your Payment</p>
-                      
-                      <button
-                        onClick={copyUpiLink}
-                        className="w-full py-2 bg-transparent text-amber-200 border border-amber-300/50 rounded-lg font-poppins hover:bg-white/5 transition-all"
-                      >
-                        Copy payment link
-                      </button>
-                      
-                      {upiLink && (
-                        <div className="mt-2 space-y-2 text-center">
-                          <p className="text-sm text-white/70 font-poppins">Or scan QR in your UPI app</p>
-                          <div className="mx-auto bg-white/5 border border-amber-300/30 rounded-xl p-3 w-fit">
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiLink)}`}
-                              alt="UPI QR"
-                              className="h-64 w-64 object-contain"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-3 pt-4 border-t border-amber-300/20">
-                      <button
-                        onClick={() => setShowQRCode(false)}
-                        className="flex-1 py-2 border border-amber-300/50 text-amber-200 rounded-lg font-poppins hover:bg-white/5 transition-all"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handlePaymentDone}
-                        disabled={isProcessing}
-                        className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-300 text-black rounded-lg font-cinzel-decorative font-semibold hover:from-amber-400 hover:to-amber-200 transition-all disabled:opacity-50"
-                      >
-                        {isProcessing ? "Processing..." : "PROCEED TO PAYMENT"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
+                <div className="flex gap-3 pt-4 border-t border-amber-300/20">
+                  <button
+                    onClick={() => setCurrentStep('datetime')}
+                    disabled={isProcessing}
+                    className="flex-1 py-2 border border-amber-300/50 text-amber-200 rounded-lg font-poppins hover:bg-white/5 transition-all disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Step 3: Confirmation */}

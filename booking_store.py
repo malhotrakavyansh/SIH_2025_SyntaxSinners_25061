@@ -27,8 +27,52 @@ def init_db() -> None:
         )
         """
     )
+    # Holds a booking's details between "Razorpay order created" and "payment verified" -
+    # nothing here is a confirmed booking yet. Keyed by Razorpay's own order_id so the
+    # verify step can look up what was actually being paid for.
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pending_bookings (
+            razorpay_order_id TEXT PRIMARY KEY,
+            booking_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            payload TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
     conn.close()
+
+
+def add_pending_booking(razorpay_order_id: str, booking_type: str, amount: float, payload: dict) -> None:
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO pending_bookings (razorpay_order_id, booking_type, amount, payload, created_at) VALUES (?, ?, ?, ?, ?)",
+        (razorpay_order_id, booking_type, amount, json.dumps(payload), datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def pop_pending_booking(razorpay_order_id: str) -> dict | None:
+    """Fetches and deletes a pending booking - it's only ever consumed once, right after
+    a payment is verified."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM pending_bookings WHERE razorpay_order_id = ?", (razorpay_order_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return None
+    conn.execute("DELETE FROM pending_bookings WHERE razorpay_order_id = ?", (razorpay_order_id,))
+    conn.commit()
+    conn.close()
+    return {
+        "booking_type": row["booking_type"],
+        "amount": row["amount"],
+        "payload": json.loads(row["payload"]),
+    }
 
 
 def add_booking(booking_id: str, order_id: str, booking_type: str, amount: float, payload: dict) -> None:

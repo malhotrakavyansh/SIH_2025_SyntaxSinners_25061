@@ -1,8 +1,11 @@
+import hashlib
+import hmac
 import os
 import shutil
 import uuid
 from pathlib import Path
 
+import razorpay
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +22,14 @@ api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
     raise RuntimeError("GEMINI_API_KEY is not set. Please create a .env file.")
+
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+razorpay_client = (
+    razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+    if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET
+    else None
+)
 
 UPLOAD_DIR = Path(__file__).parent / "archive_uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -185,9 +196,81 @@ def _create_booking(booking_type: str, payload: dict) -> BookingResponse:
         message="Order created and payment confirmed.",
     )
 
-@app.post("/api/create-order", response_model=BookingResponse)
+class RazorpayOrderResponse(BaseModel):
+    success: bool
+    razorpayOrderId: str
+    amount: float
+    currency: str
+    keyId: str
+
+@app.post("/api/create-order", response_model=RazorpayOrderResponse)
 def create_tour_guide_order(payload: dict):
-    return _create_booking("tour_guide", payload)
+    """Creates a real Razorpay order for a tour-guide booking. Nothing is confirmed or
+    stored as a real booking yet - that only happens once /api/verify-payment confirms
+    the payment actually went through and the signature checks out."""
+    if razorpay_client is None or not RAZORPAY_KEY_ID:
+        raise HTTPException(status_code=503, detail="Payments are not configured on this server.")
+
+    amount = payload.get("amount")
+    if amount is None:
+        raise HTTPException(status_code=400, detail="Missing required field: amount")
+
+    order = razorpay_client.order.create({
+        "amount": int(float(amount) * 100),  # Razorpay expects the amount in paise
+        "currency": "INR",
+        "payment_capture": 1,
+    })
+
+    booking_store.add_pending_booking(order["id"], "tour_guide", float(amount), payload)
+
+    return RazorpayOrderResponse(
+        success=True,
+        razorpayOrderId=order["id"],
+        amount=float(amount),
+        currency="INR",
+        keyId=RAZORPAY_KEY_ID,
+    )
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+@app.post("/api/verify-payment", response_model=BookingResponse)
+def verify_payment(request: VerifyPaymentRequest):
+    """Verifies a Razorpay payment signature server-side before treating a booking as
+    real - never trust the frontend's word alone that a payment succeeded. The
+    signature is the only proof that Razorpay itself authorized this specific payment
+    for this specific order."""
+    if razorpay_client is None or not RAZORPAY_KEY_SECRET:
+        raise HTTPException(status_code=503, detail="Payments are not configured on this server.")
+
+    expected_signature = hmac.new(
+        RAZORPAY_KEY_SECRET.encode(),
+        f"{request.razorpay_order_id}|{request.razorpay_payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, request.razorpay_signature):
+        raise HTTPException(status_code=400, detail="Payment verification failed.")
+
+    pending = booking_store.pop_pending_booking(request.razorpay_order_id)
+    if pending is None:
+        raise HTTPException(status_code=404, detail="No matching pending booking found.")
+
+    booking_id = f"BOOK_{uuid.uuid4().hex[:10].upper()}"
+    payload = {**pending["payload"], "razorpayPaymentId": request.razorpay_payment_id}
+    booking_store.add_booking(
+        booking_id, request.razorpay_order_id, pending["booking_type"], pending["amount"], payload
+    )
+
+    return BookingResponse(
+        success=True,
+        orderId=request.razorpay_order_id,
+        bookingId=booking_id,
+        amount=pending["amount"],
+        message="Payment verified and booking confirmed.",
+    )
 
 @app.post("/api/create-meditation-booking", response_model=BookingResponse)
 def create_meditation_booking(payload: dict):
