@@ -18,6 +18,7 @@ from chatbot import BodhiChatbot
 import archive_store
 import booking_store
 import ocr
+import submissions_store
 import users_store
 
 # Load environment variables
@@ -68,6 +69,7 @@ bodhi = BodhiChatbot(api_key=api_key)
 archive_store.init_db()
 booking_store.init_db()
 users_store.init_db()
+submissions_store.init_db()
 
 # Define the JSON schemas for requests and responses
 class ChatRequest(BaseModel):
@@ -398,8 +400,9 @@ def logout(response: Response):
     return {"success": True}
 
 
-@app.get("/api/auth/me", response_model=UserResponse)
-def get_current_user(sangha_session: str | None = Cookie(default=None)):
+def _require_user(sangha_session: str | None) -> dict:
+    """Shared auth check for any endpoint that needs a logged-in user. Raises 401
+    if the session cookie is missing, expired, or no longer maps to a real user."""
     if sangha_session is None:
         raise HTTPException(status_code=401, detail="Not logged in.")
     payload = _decode_token(sangha_session)
@@ -408,4 +411,66 @@ def get_current_user(sangha_session: str | None = Cookie(default=None)):
     user = users_store.get_user_by_id(payload["sub"])
     if user is None:
         raise HTTPException(status_code=401, detail="User no longer exists.")
-    return UserResponse(**user)
+    return user
+
+
+@app.get("/api/auth/me", response_model=UserResponse)
+def get_current_user(sangha_session: str | None = Cookie(default=None)):
+    return UserResponse(**_require_user(sangha_session))
+
+
+@app.post("/api/submissions")
+def create_submission(
+    title: str = Form(...),
+    monastery: str = Form(...),
+    type: str = Form(...),
+    year: str = Form(""),
+    location: str = Form(""),
+    description: str = Form(""),
+    tags: str = Form(""),
+    file: UploadFile = File(...),
+    sangha_session: str | None = Cookie(default=None),
+):
+    """Public contribution flow: any logged-in user can submit an artifact for
+    review. Unlike /archive/upload, this never publishes directly - it lands in
+    submissions_store with status='pending' until an admin approves it."""
+    user = _require_user(sangha_session)
+
+    submission_id = uuid.uuid4().hex
+    extension = Path(file.filename or "upload").suffix or ".jpg"
+    image_filename = f"submission_{submission_id}{extension}"
+    image_path = UPLOAD_DIR / image_filename
+
+    with image_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    try:
+        ocr_text = ocr.extract_text(str(image_path))
+    except Exception as e:
+        print(f"OCR failed for {image_path}: {e}")
+        ocr_text = "OCR unavailable for this item."
+
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+
+    created_id = submissions_store.add_submission({
+        "contributor_id": user["id"],
+        "contributor_name": user["name"],
+        "title": title,
+        "monastery": monastery,
+        "type": type,
+        "year": year,
+        "location": location,
+        "description": description,
+        "image_filename": image_filename,
+        "ocr_text": ocr_text,
+        "tags": tag_list,
+    })
+
+    submission = submissions_store.get_submission(created_id)
+    return {"success": True, "submission": submission}
+
+
+@app.get("/api/submissions/mine")
+def list_my_submissions(sangha_session: str | None = Cookie(default=None)):
+    user = _require_user(sangha_session)
+    return {"submissions": submissions_store.list_submissions_by_contributor(user["id"])}

@@ -47,6 +47,7 @@ export default function Nav() {
             <li><a href="#monastery-slideshow" className="hover:opacity-80">Overview</a></li>
             <li><a href="#monastery-map" className="hover:opacity-80">Map</a></li>
             <li><Link href="/archive" className="hover:opacity-80">Digital Archive</Link></li>
+            <li><Link href="/contribute" className="hover:opacity-80">Contribute</Link></li>
           </ul>
 
           {/* Right: search + burger */}
@@ -103,6 +104,7 @@ export default function Nav() {
               <li><a href="#monastery-slideshow" onClick={()=>setOpen(false)}>Overview</a></li>
               <li><a href="#monastery-map" onClick={()=>setOpen(false)}>Map</a></li>
               <li><Link href="/archive" onClick={()=>setOpen(false)}>Digital Archive</Link></li>
+              <li><Link href="/contribute" onClick={()=>setOpen(false)}>Contribute</Link></li>
               {user ? (
                 <>
                   {user.role === "admin" && (
