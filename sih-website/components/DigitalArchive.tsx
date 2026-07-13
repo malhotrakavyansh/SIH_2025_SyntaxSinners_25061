@@ -12,7 +12,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type IconProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
 const Icon = ({ children, className = "", style }: IconProps) => (
-  <span className={className} style={style} aria-hidden>
+  <span
+    className={`inline-flex items-center justify-center align-middle ${className}`}
+    style={{ fontSize: "0.85em", lineHeight: 1, ...style }}
+    aria-hidden
+  >
     {children}
   </span>
 );
@@ -47,7 +51,14 @@ type ButtonProps = {
   disabled?: boolean;
 };
 const Button = ({ children, onClick, className = "", style = {}, disabled }: ButtonProps) => (
-  <button onClick={onClick} className={className} style={style} disabled={disabled}>{children}</button>
+  <button
+    onClick={onClick}
+    className={`inline-flex items-center px-4 py-2 ${className}`}
+    style={style}
+    disabled={disabled}
+  >
+    {children}
+  </button>
 );
 type BadgeProps = { children: React.ReactNode; className?: string; style?: React.CSSProperties };
 const Badge = ({ children, className = "", style = {} }: BadgeProps) => (
@@ -174,14 +185,14 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove?: ()
 function ArchiveCard({ item, onOpen }: { item: ArchiveItem; onOpen: (it: ArchiveItem) => void }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="overflow-hidden border-0 shadow-lg pop-card shine-border" style={{ borderRadius: "1.25rem" }}>
+      <Card className="overflow-hidden border-0 shadow-lg pop-card shine-border" style={{ borderRadius: "1.25rem", background: "#F8F4EA" }}>
         <div className="aspect-[4/3] w-full overflow-hidden" style={{ background: "#2F3A3D" }}>
           <img src={item.img} alt={item.title} className="h-full w-full object-cover hover:scale-[1.02] transition-transform duration-300" />
         </div>
         <CardContent className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg md:text-xl font-semibold" style={{ color: "#2F3A3D" }}>{item.title}</h3>
-            <Badge className="text-xs" style={{ background: "#2A6F6C", color: "white" }}>{item.type}</Badge>
+            <Badge className="text-xs shadow-sm shrink-0" style={{ background: "#2A6F6C", color: "white", borderRadius: "0.875rem", padding: "0.375rem 0.875rem" }}>{item.type}</Badge>
           </div>
           <div className="mt-2 flex flex-wrap gap-3 text-sm" style={{ color: "#2F3A3D" }}>
             <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" />{item.monastery} • {item.location}</span>
@@ -193,10 +204,10 @@ function ArchiveCard({ item, onOpen }: { item: ArchiveItem; onOpen: (it: Archive
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <Button onClick={() => onOpen(item)} className="shadow-sm" style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
+            <Button onClick={() => onOpen(item)} className="shadow-sm pop-btn" style={{ background: "#5B2C2C", color: "white", borderRadius: "0.875rem" }}>
               <Eye className="h-4 w-4 mr-2" /> View
             </Button>
-            <Button className="shadow-sm" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
+            <Button className="shadow-sm pop-btn" style={{ borderRadius: "0.875rem", borderColor: "#D4AF37", color: "#5B2C2C" }}>
               <Download className="h-4 w-4 mr-2" /> Download
             </Button>
           </div>
@@ -413,7 +424,7 @@ export default function DigitalArchivePage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
             {/* Left: Monasteries */}
             <div className="md:col-span-4">
-              <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+              <div className="rounded-2xl p-5 border" style={{ background: "#F8F4EA", borderColor: "#D4AF37", boxShadow: "0 12px 36px rgba(0,0,0,0.35)" }}>
                 <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>MONASTERIES</h3>
 
                 <DropdownMenu>
@@ -442,7 +453,7 @@ export default function DigitalArchivePage() {
 
             {/* Center: Artifact Type */}
             <div className="md:col-span-4">
-              <div className="rounded-2xl backdrop-blur-sm p-5 border" style={{ background: "rgba(248, 244, 234, 0.92)", borderColor: "#D4AF37", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+              <div className="rounded-2xl p-5 border" style={{ background: "#F8F4EA", borderColor: "#D4AF37", boxShadow: "0 12px 36px rgba(0,0,0,0.35)" }}>
                 <h3 className="text-xs font-semibold mb-4 tracking-wider" style={{ color: "#5B2C2C" }}>ARTIFACT TYPE</h3>
 
                 <DropdownMenu>
